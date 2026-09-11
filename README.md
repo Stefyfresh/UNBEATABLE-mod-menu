@@ -2,6 +2,8 @@
 
 A mod to add a mod menu to the hit rhythm game UNBEATABLE!
 
+This mod is currently in development, check back soon for more information!
+
 ## Features
 
 - Gathers configuration automatically from all BepInEx plugins that are loaded
