@@ -10,6 +10,7 @@ using UnityEngine.Localization.PropertyVariants;
 using Arcade.UI;
 using Arcade.UI.MenuStates;
 using Arcade.UI.AnimationSystem;
+using BepInEx;
 
 namespace ModMenu.Patches
 {
@@ -41,7 +42,7 @@ namespace ModMenu.Patches
                 MenuBuilder.labelPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Keybinds/Viewport/Content/LabelStandard").gameObject;
                 MenuBuilder.selectorPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Graphics/Viewport/Content/OptionSelector").gameObject;
                 MenuBuilder.togglePrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Graphics/Viewport/Content/OptionToggle").gameObject;
-
+                // MenuBuilder.consoleInputPrefab = GameObject.Find("/JeffBezos/AllenDulles/Canvas Parent/Canvas/Console/Console Input");
 
 
                 // Make new GameObjects
@@ -136,6 +137,19 @@ namespace ModMenu.Patches
         static void Postfix(ref FMODButton __instance)
         {
             if (__instance.gameObject.name == MenuBuilder.modButtonGO.name) MenuBuilder.firstSelectable.Select();
+        }
+    }
+
+
+
+    [HarmonyPatch(typeof(MainMenuController))]
+    [HarmonyPatch("Start")]
+    internal class MainMenuControllerStartPatch
+    {
+        static void Postfix(ref MainMenuController __instance)
+        {
+            int numMods = ModMenu.Instance.transform.GetComponents<BaseUnityPlugin>().Length;
+            __instance.VersionNumber.text = $"v{Application.version} ({numMods} {(numMods == 1 ? "MOD" : "MODS")} LOADED)";
         }
     }
 }

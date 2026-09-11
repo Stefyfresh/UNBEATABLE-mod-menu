@@ -30,7 +30,7 @@ namespace ModMenu
     {
         public const string PLUGIN_GUID = "com.stefyfresh.ModMenu";
         public const string PLUGIN_NAME = "Mod Menu";
-        public const string PLUGIN_VERSION = "0.1.0";
+        public const string PLUGIN_VERSION = "0.3.0";
         internal static new ManualLogSource Logger;
 
         public static ModMenu Instance { get; private set; }

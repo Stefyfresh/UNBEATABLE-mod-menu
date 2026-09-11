@@ -27,6 +27,7 @@ namespace ModMenu
         public static GameObject selectorPrefab;
         public static GameObject togglePrefab;
         public static GameObject inputPrefab;
+        // public static GameObject consoleInputPrefab;
         public static Selectable firstSelectable;
         public static Selectable optionDescriptionSelectable;
         public static Material customUIMaterial;
@@ -45,7 +46,7 @@ namespace ModMenu
             }
 
             // Create the input prefab
-            GenerateInputPrefab();
+            bool inputEnabled = TryGenerateInputPrefab();
 
             // Create mod menu label
             GameObject tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
@@ -162,7 +163,8 @@ namespace ModMenu
                             FixLocalizedFont(tempGO);
                             tempGO.SetActive(true);
                         }
-                        else if (config.SettingType == typeof(string))
+                        // String type stuff
+                        else if (config.SettingType == typeof(string) && inputEnabled)
                         {
                             // only cosmetic lol
                             if (!createdOptionProviders) OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)currentConfigIndex,
@@ -171,6 +173,18 @@ namespace ModMenu
                             tempGO = UnityEngine.Object.Instantiate(inputPrefab, modMenuContent);
                             SetNavigationTransform(tempGO);
                             SetOptionProviderInput(tempGO, config, currentConfigIndex);
+                            SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+                            FixLocalizedFont(tempGO);
+                            tempGO.SetActive(true);
+                        }
+                        // Enum type stuff
+                        else if (config.SettingType.IsEnum)
+                        {
+                            if (!createdOptionProviders) config.CreateEnumOptionProvider(definition, currentConfigIndex);
+
+                            tempGO = UnityEngine.Object.Instantiate(selectorPrefab, modMenuContent);
+                            SetNavigationTransform(tempGO);
+                            SetOptionProviderSelector(tempGO, currentConfigIndex);
                             SetHeight(tempGO, MenuConstants.optionSelectorHeight);
                             FixLocalizedFont(tempGO);
                             tempGO.SetActive(true);
@@ -235,26 +249,6 @@ namespace ModMenu
 
             ModMenu.Logger.LogInfo("Successfully built mod menu.");
         }
-
-        // private static void CreateRangedOptionProvider<T>(ConfigEntryBase config, ConfigDefinition definition, int providerIndex, AcceptableValueList<T> acceptableValues) where T : IEquatable<T>
-        // {
-        //     OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)providerIndex,
-        //         new OptionsProvider.TextOptionProvider(
-        //             BeautifyString(UnCamelCase(definition.Key)),
-        //             acceptableValues.AcceptableValues.Select((i) => TomlTypeConverter.ConvertToString(config.BoxedValue, config.SettingType)).ToArray(),
-        //             false,
-        //             () => acceptableValues.AcceptableValues.ToList().IndexOf((T)config.BoxedValue),
-        //             (i) =>
-        //             {
-        //                 // Set to default if index is wrong
-        //                 if (i == -1) config.BoxedValue = config.DefaultValue;
-
-        //                 // Set the index
-        //                 config.BoxedValue = acceptableValues.AcceptableValues[i];
-        //             }
-        //         )
-        //     );
-        // }
 
 
         public static List<string> SplitLineIntoChunks(string str, string separator, int maxChunkLength)
@@ -468,74 +462,85 @@ namespace ModMenu
 
 
 
-        public static void GenerateInputPrefab()
+        public static bool TryGenerateInputPrefab()
         {
-            // Create and get objects
-            inputPrefab = UnityEngine.Object.Instantiate(togglePrefab, modMenuContent);
-            inputPrefab.name = "OptionInput";
-            inputPrefab.transform.Find("ValueGroup/LeftArrow").gameObject.SetActive(false);
-            inputPrefab.transform.Find("ValueGroup/RightArrow").gameObject.SetActive(false);
-            GameObject oldValue = inputPrefab.transform.Find("ValueGroup/Value").gameObject;
-            TextMeshProUGUI oldValueText = oldValue.GetComponent<TextMeshProUGUI>();
-            oldValue.SetActive(false);
-            GameObject inputGO = UnityEngine.Object.Instantiate(GameObject.Find("/JeffBezos/AllenDulles/Canvas Parent/Canvas/Console/Console Input"), inputPrefab.transform.Find("ValueGroup"));
-            // Set transform values
-            if (inputGO.transform is RectTransform rect)
+            try
             {
-                rect.localPosition = Vector3.zero;
-                rect.pivot = new Vector2(0.5f, 0.5f);
-                rect.sizeDelta = new Vector2(MenuConstants.inputTextAreaWidth, MenuConstants.inputTextAreaHeight);
-            }
+                // Create and get objects
+                inputPrefab = UnityEngine.Object.Instantiate(togglePrefab, modMenuContent);
+                inputPrefab.name = "OptionInput";
+                inputPrefab.transform.Find("ValueGroup/LeftArrow").gameObject.SetActive(false);
+                inputPrefab.transform.Find("ValueGroup/RightArrow").gameObject.SetActive(false);
+                GameObject oldValue = inputPrefab.transform.Find("ValueGroup/Value").gameObject;
+                TextMeshProUGUI oldValueText = oldValue.GetComponent<TextMeshProUGUI>();
+                oldValue.SetActive(false);
+                GameObject consoleInputPrefab = JeffBezosController.instance?.transform.Find("AllenDulles/Canvas Parent/Canvas/Console/Console Input")?.gameObject;
+                GameObject inputGO = UnityEngine.Object.Instantiate(consoleInputPrefab, inputPrefab.transform.Find("ValueGroup"));
+                // Set transform values
+                if (inputGO.transform is RectTransform rect)
+                {
+                    rect.localPosition = Vector3.zero;
+                    rect.pivot = new Vector2(0.5f, 0.5f);
+                    rect.sizeDelta = new Vector2(MenuConstants.inputTextAreaWidth, MenuConstants.inputTextAreaHeight);
+                }
 
-            Image bg = inputGO.GetComponent<Image>();
-            if (bg)
-            {
-                bg.material = customUIMaterial;
-                bg.color = new Color(0.0248f, 0, 0, 1);
-            }
+                Image bg = inputGO.GetComponent<Image>();
+                if (bg)
+                {
+                    bg.material = customUIMaterial;
+                    bg.color = new Color(0.0248f, 0, 0, 1);
+                }
 
-            // Set up text area
-            TMP_InputField input = inputGO.GetComponent<TMP_InputField>();
-            input.text = "";
-            input.caretWidth = 2;
-            input.lineType = TMP_InputField.LineType.SingleLine;
-            input.fontAsset = oldValueText.font;
-            if (input.textComponent is TextMeshProUGUI text)
-            {
-                text.font = oldValueText.font;
-                text.fontMaterial = oldValueText.fontMaterial;
-                text.color = new Color(0.15f, 0, 0, 1);
-            }
-            if (input.placeholder is TextMeshProUGUI placeholderText)
-            {
-                placeholderText.font = oldValueText.font;
-                placeholderText.text = BeautifyString("...");
-                placeholderText.fontMaterial = oldValueText.fontMaterial;
-                placeholderText.color = new Color(0.15f, 0, 0, 0.6f);
-                placeholderText.fontStyle = FontStyles.Normal;
-            }
-            if (inputGO.transform.Find("Text Area/Caret") is RectTransform caretRect)
-            {
-                caretRect.offsetMax = new Vector2(0, 0);
-                caretRect.offsetMin = new Vector2(0, 0);
-                caretRect.pivot = new Vector2(0.5f, 0.5f);
-            }
-            if (inputGO.transform.Find("Text Area/Text") is RectTransform textRect)
-            {
-                textRect.offsetMax = new Vector2(0, 0);
-                textRect.offsetMin = new Vector2(0, 0);
-                textRect.pivot = new Vector2(0.5f, 0.5f);
-            }
-            if (inputGO.transform.Find("Text Area/Placeholder") is RectTransform placeholderRect)
-            {
-                placeholderRect.offsetMax = new Vector2(0, 0);
-                placeholderRect.offsetMin = new Vector2(0, 0);
-                placeholderRect.pivot = new Vector2(0.5f, 0.5f);
-            }
+                // Set up text area
+                TMP_InputField input = inputGO.GetComponent<TMP_InputField>();
+                input.text = "";
+                input.caretWidth = 2;
+                input.lineType = TMP_InputField.LineType.SingleLine;
+                input.fontAsset = oldValueText.font;
+                if (input.textComponent is TextMeshProUGUI text)
+                {
+                    text.font = oldValueText.font;
+                    text.fontMaterial = oldValueText.fontMaterial;
+                    text.color = new Color(0.15f, 0, 0, 1);
+                }
+                if (input.placeholder is TextMeshProUGUI placeholderText)
+                {
+                    placeholderText.font = oldValueText.font;
+                    placeholderText.text = BeautifyString("...");
+                    placeholderText.fontMaterial = oldValueText.fontMaterial;
+                    placeholderText.color = new Color(0.15f, 0, 0, 0.6f);
+                    placeholderText.fontStyle = FontStyles.Normal;
+                }
+                if (inputGO.transform.Find("Text Area/Caret") is RectTransform caretRect)
+                {
+                    caretRect.offsetMax = new Vector2(0, 0);
+                    caretRect.offsetMin = new Vector2(0, 0);
+                    caretRect.pivot = new Vector2(0.5f, 0.5f);
+                }
+                if (inputGO.transform.Find("Text Area/Text") is RectTransform textRect)
+                {
+                    textRect.offsetMax = new Vector2(0, 0);
+                    textRect.offsetMin = new Vector2(0, 0);
+                    textRect.pivot = new Vector2(0.5f, 0.5f);
+                }
+                if (inputGO.transform.Find("Text Area/Placeholder") is RectTransform placeholderRect)
+                {
+                    placeholderRect.offsetMax = new Vector2(0, 0);
+                    placeholderRect.offsetMin = new Vector2(0, 0);
+                    placeholderRect.pivot = new Vector2(0.5f, 0.5f);
+                }
 
-            // inputGO.AddComponent<InputTextController>();
+                // inputGO.AddComponent<InputTextController>();
 
-            inputPrefab.SetActive(false);
+                inputPrefab.SetActive(false);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ModMenu.Logger.LogWarning($"Failed to create input prefab! {ex}");
+                inputPrefab?.SetActive(false);
+                return false;
+            }
         }
     }
 }
