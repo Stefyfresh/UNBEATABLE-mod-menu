@@ -68,6 +68,7 @@ namespace ModMenu
             FixLocalizedFont(tempGO);
             SetHeight(tempGO, MenuConstants.optionSelectorHeight);
             tempGO.SetActive(true);
+            CreateDescriptionsIfNeeded(ModMenu.fasterMenuTransitions);
 
             // Create descriptions option
             if (!createdOptionProviders) OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)ModMenuOptions.ShowOptionDescriptions,
@@ -84,6 +85,8 @@ namespace ModMenu
             FixLocalizedFont(tempGO);
             SetHeight(tempGO, MenuConstants.optionSelectorHeight);
             tempGO.SetActive(true);
+            CreateDescriptionsIfNeeded(ModMenu.showOptionDescriptions);
+
 
 
             // Generate fields for existing plugin configs
@@ -214,30 +217,8 @@ namespace ModMenu
                         // Increment config index
                         currentConfigIndex++;
 
-
                         // Create description lines if enabled
-                        if (ModMenu.showOptionDescriptions.Value)
-                        {
-                            if (!config.Description.Description.IsNullOrWhiteSpace())
-                            {
-                                foreach (string line in SplitLineIntoChunks(config.Description.Description, "\n", MenuConstants.configDescriptionLength))
-                                {
-                                    if (!line.IsNullOrWhiteSpace())
-                                    {
-                                        tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-                                        SetLabelText(tempGO, line, HorizontalAlignmentOptions.Left);
-                                        SetHeight(tempGO, MenuConstants.configDescriptionHeight);
-                                        FixLocalizedFont(tempGO);
-                                        tempGO.SetActive(true);
-                                    }
-                                }
-                                tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-                                SetLabelText(tempGO);
-                                FixLocalizedFont(tempGO);
-                                SetHeight(tempGO, MenuConstants.configDescriptionBottomMargin);
-                                tempGO.SetActive(true);
-                            }
-                        }
+                        CreateDescriptionsIfNeeded(config);
                     }
                 }
             }
@@ -255,28 +236,25 @@ namespace ModMenu
             ModMenu.Logger.LogInfo("Successfully built mod menu.");
         }
 
+        // private static void CreateRangedOptionProvider<T>(ConfigEntryBase config, ConfigDefinition definition, int providerIndex, AcceptableValueList<T> acceptableValues) where T : IEquatable<T>
+        // {
+        //     OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)providerIndex,
+        //         new OptionsProvider.TextOptionProvider(
+        //             BeautifyString(UnCamelCase(definition.Key)),
+        //             acceptableValues.AcceptableValues.Select((i) => TomlTypeConverter.ConvertToString(config.BoxedValue, config.SettingType)).ToArray(),
+        //             false,
+        //             () => acceptableValues.AcceptableValues.ToList().IndexOf((T)config.BoxedValue),
+        //             (i) =>
+        //             {
+        //                 // Set to default if index is wrong
+        //                 if (i == -1) config.BoxedValue = config.DefaultValue;
 
-        private static void CreateRangedOptionProvider<T>(ConfigEntryBase config, ConfigDefinition definition, int providerIndex, AcceptableValueList<T> acceptableValues) where T : IEquatable<T>
-        {
-            OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)providerIndex,
-                new OptionsProvider.TextOptionProvider(
-                    BeautifyString(UnCamelCase(definition.Key)),
-                    acceptableValues.AcceptableValues.Select((i) => TomlTypeConverter.ConvertToString(config.BoxedValue, config.SettingType)).ToArray(),
-                    false,
-                    () => acceptableValues.AcceptableValues.ToList().IndexOf((T)config.BoxedValue),
-                    (i) =>
-                    {
-                        // Set to default if index is wrong
-                        if (i == -1) config.BoxedValue = config.DefaultValue;
-
-                        // Set the index
-                        config.BoxedValue = acceptableValues.AcceptableValues[i];
-                    }
-                )
-            );
-        }
-
-
+        //                 // Set the index
+        //                 config.BoxedValue = acceptableValues.AcceptableValues[i];
+        //             }
+        //         )
+        //     );
+        // }
 
 
         public static List<string> SplitLineIntoChunks(string str, string separator, int maxChunkLength)
@@ -336,6 +314,34 @@ namespace ModMenu
         }
 
 
+        public static void CreateDescriptionsIfNeeded(ConfigEntryBase config)
+        {
+            if (ModMenu.showOptionDescriptions.Value)
+            {
+                GameObject tempGO;
+                if (!config.Description.Description.IsNullOrWhiteSpace())
+                {
+                    foreach (string line in SplitLineIntoChunks(config.Description.Description, "\n", MenuConstants.configDescriptionLength))
+                    {
+                        if (!line.IsNullOrWhiteSpace())
+                        {
+                            tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
+                            SetLabelText(tempGO, line, HorizontalAlignmentOptions.Left);
+                            SetHeight(tempGO, MenuConstants.configDescriptionHeight);
+                            FixLocalizedFont(tempGO);
+                            tempGO.SetActive(true);
+                        }
+                    }
+                    tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
+                    SetLabelText(tempGO);
+                    FixLocalizedFont(tempGO);
+                    SetHeight(tempGO, MenuConstants.configDescriptionBottomMargin);
+                    tempGO.SetActive(true);
+                }
+            }
+        }
+
+
         public static void SetHeight(GameObject gameObject, int height)
         {
             RectTransform rect = gameObject.transform as RectTransform;
@@ -357,10 +363,7 @@ namespace ModMenu
                 // text.Replace(" ", "<space=0.3em> </space>");
                 tmp.text = $"<mspace=11>//<mspace=17> </mspace>" + BeautifyString(text);
             }
-
         }
-
-
 
         private static void FixLocalizedFont(GameObject gameObject)
         {
@@ -501,14 +504,14 @@ namespace ModMenu
             {
                 text.font = oldValueText.font;
                 text.fontMaterial = oldValueText.fontMaterial;
-                text.color = oldValueText.color;
+                text.color = new Color(0.15f, 0, 0, 1);
             }
             if (input.placeholder is TextMeshProUGUI placeholderText)
             {
                 placeholderText.font = oldValueText.font;
                 placeholderText.text = BeautifyString("...");
                 placeholderText.fontMaterial = oldValueText.fontMaterial;
-                placeholderText.color = oldValueText.color;
+                placeholderText.color = new Color(0.15f, 0, 0, 0.6f);
                 placeholderText.fontStyle = FontStyles.Normal;
             }
             if (inputGO.transform.Find("Text Area/Caret") is RectTransform caretRect)

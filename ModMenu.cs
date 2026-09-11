@@ -30,7 +30,7 @@ namespace ModMenu
     {
         public const string PLUGIN_GUID = "com.stefyfresh.ModMenu";
         public const string PLUGIN_NAME = "Mod Menu";
-        public const string PLUGIN_VERSION = "1.0.0";
+        public const string PLUGIN_VERSION = "0.1.0";
         internal static new ManualLogSource Logger;
 
         public static ModMenu Instance { get; private set; }
@@ -50,14 +50,14 @@ namespace ModMenu
             fasterMenuTransitions = Config.Bind(
                 "General",
                 "FasterMenuTransitions",
-                true,
+                false,
                 "Enables faster transitions in the arcade mode menu"
             );
             showOptionDescriptions = Config.Bind(
                 "General",
                 "ShowOptionDescriptions",
-                false,
-                "Shows a detailed description for all mod menu options"
+                true,
+                "Shows a detailed description for all mod menu options, if available"
             );
 
             var harmony = new Harmony(PLUGIN_GUID);
