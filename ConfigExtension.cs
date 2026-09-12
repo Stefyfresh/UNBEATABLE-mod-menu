@@ -18,7 +18,7 @@ namespace ModMenu
         {
             try
             {
-                OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)providerIndex,
+                OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] =
                     new OptionsProvider.TextOptionProvider(
                         MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(definition.Key)),
                         acceptableValues.AcceptableValues.Select((i) => TomlTypeConverter.ConvertToString(i, config.SettingType)).ToArray(),
@@ -36,8 +36,7 @@ namespace ModMenu
                             // Set the index
                             config.BoxedValue = acceptableValues.AcceptableValues[i];
                         }
-                    )
-                );
+                    );
             }
             catch (Exception ex)
             {
@@ -53,7 +52,7 @@ namespace ModMenu
         }
         private static void DoCreateRangeOptionProvider<T>(AcceptableValueRange<T> acceptableValues, ConfigEntryBase config, ConfigDefinition definition, int providerIndex) where T : IComparable
         {
-            OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)providerIndex, new OptionsProvider.TextOptionProvider(
+            OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] = new OptionsProvider.TextOptionProvider(
                 MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(definition.Key)),
                 [config.GetSerializedValue(), "1", "2"],
                 false,
@@ -90,7 +89,6 @@ namespace ModMenu
                         ModMenu.Logger.LogWarning($"Error in updating value for config \"{MenuBuilder.UnCamelCase(definition.Key)}\": {ex}");
                     }
                 }
-                )
             );
         }
 
@@ -126,7 +124,7 @@ namespace ModMenu
                     }
                 }
 
-                OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)providerIndex,
+                OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] =
                     new OptionsProvider.TextOptionProvider(
                         MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(definition.Key)),
                         names.ToArray(),
@@ -151,9 +149,7 @@ namespace ModMenu
                                 ModMenu.Logger.LogWarning($"Error in updating value for config \"{MenuBuilder.UnCamelCase(definition.Key)}\": {ex}");
                             }
                         }
-                    )
-                );
-
+                    );
             }
             catch (Exception ex)
             {

@@ -68,7 +68,7 @@ namespace ModMenu.Patches
                 MenuBuilder.modMenuGO.GetComponent<UIFocusOnButton>().selectables = [MenuBuilder.modButtonGO];
 
                 // Build menu
-                MenuBuilder.BuildMenu();
+                MenuBuilder.BuildMenu(true);
 
 
                 // Set component values
