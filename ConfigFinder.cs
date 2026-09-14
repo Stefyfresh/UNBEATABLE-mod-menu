@@ -13,7 +13,6 @@ namespace ModMenu
         public static Dictionary<string, bool> pluginShowOverrides;
 
 
-        // public static readonly string[] disallowedPluginGUIDs = ["com.sinai.unityexplorer"];
         public static List<string> pluginGUIDs = [];
         public static Dictionary<string, ConfigFile> pluginConfigFiles = [];
         public static Dictionary<string, BepInPlugin> pluginMetadata = [];
@@ -30,9 +29,6 @@ namespace ModMenu
                 {
                     // Skip the current plugin as we set the configs manually
                     if (plugin == ModMenu.Instance) continue;
-
-                    // // Skip plugins that I am manually ignoring
-                    // if (disallowedPluginGUIDs.Contains(plugin.Info.Metadata.GUID)) continue;
 
                     // Add all plugin information
                     pluginGUIDs.Add(plugin.Info.Metadata.GUID);

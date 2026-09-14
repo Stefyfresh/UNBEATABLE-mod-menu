@@ -46,7 +46,7 @@ namespace ModMenu
                 UnityEngine.Object.DestroyImmediate(modMenuContent.GetChild(0).gameObject);
             }
 
-            // Try to the input prefab and set state accordingly
+            // Try to create the input prefab and set state accordingly
             bool inputEnabled = TryGenerateInputPrefab();
 
             CreateModMenuTextAndOptions();
@@ -131,60 +131,87 @@ namespace ModMenu
                                     (b) => config.BoxedValue = b        //Setter
                                 );
 
-                            tempGO = UnityEngine.Object.Instantiate(togglePrefab, modMenuContent);
-                            SetNavigationTransform(tempGO);
-                            SetOptionProviderToggle(tempGO, currentConfigIndex);
-                            SetHeight(tempGO, MenuConstants.optionSelectorHeight);
-                            FixLocalizedFont(tempGO);
-                            tempGO.SetActive(true);
+                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex))
+                            {
+                                tempGO = UnityEngine.Object.Instantiate(togglePrefab, modMenuContent);
+                                SetNavigationTransform(tempGO);
+                                SetOptionProviderToggle(tempGO, currentConfigIndex);
+                                SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+                                FixLocalizedFont(tempGO);
+                                tempGO.SetActive(true);
+                            }
                         }
                         // String type stuff
-                        else if (config.SettingType == typeof(string) && inputEnabled)
+                        else if (config.SettingType == typeof(string) && inputEnabled && config.Description.AcceptableValues == null)
                         {
                             // only cosmetic lol
                             if (!createdOptionProviders) OptionsProvider.OptionProviders[(OptionsProvider.Option)currentConfigIndex] =
                                 new OptionsProvider.ToggleOptionProvider(BeautifyString(UnCamelCase(definition.Key)), () => false, (b) => { });
 
-                            tempGO = UnityEngine.Object.Instantiate(inputPrefab, modMenuContent);
-                            SetNavigationTransform(tempGO);
-                            SetOptionProviderInput(tempGO, config, currentConfigIndex);
-                            SetHeight(tempGO, MenuConstants.optionSelectorHeight);
-                            FixLocalizedFont(tempGO);
-                            tempGO.SetActive(true);
+                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex))
+                            {
+                                tempGO = UnityEngine.Object.Instantiate(inputPrefab, modMenuContent);
+                                SetNavigationTransform(tempGO);
+                                SetOptionProviderInput(tempGO, config, currentConfigIndex);
+                                SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+                                FixLocalizedFont(tempGO);
+                                tempGO.SetActive(true);
+                            }
                         }
                         // Enum type stuff
                         else if (config.SettingType.IsEnum)
                         {
-                            if (!createdOptionProviders) config.CreateEnumOptionProvider(definition, currentConfigIndex);
+                            // TODO: KeyCode
+                            // if (config.SettingType == typeof(KeyCode))
+                            // {
 
-                            tempGO = UnityEngine.Object.Instantiate(selectorPrefab, modMenuContent);
-                            SetNavigationTransform(tempGO);
-                            SetOptionProviderSelector(tempGO, currentConfigIndex);
-                            SetHeight(tempGO, MenuConstants.optionSelectorHeight);
-                            FixLocalizedFont(tempGO);
-                            tempGO.SetActive(true);
+                            // }
+                            if (!createdOptionProviders) config.CreateEnumOptionProvider(definition, currentConfigIndex, ConfigFinder.pluginMetadata[pluginGUID]);
+
+                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex))
+                            {
+                                tempGO = UnityEngine.Object.Instantiate(selectorPrefab, modMenuContent);
+                                SetNavigationTransform(tempGO);
+                                SetOptionProviderSelector(tempGO, currentConfigIndex);
+                                SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+                                FixLocalizedFont(tempGO);
+                                tempGO.SetActive(true);
+                            }
                         }
-                        // Generic stuff
-                        else
+                        // Acceptable value stuff
+                        else if (config.Description.AcceptableValues != null)
                         {
                             if (!createdOptionProviders)
                             {
                                 AcceptableValueBase acceptable = config.Description.AcceptableValues;
 
                                 // Acceptable value list stuff
-                                if (acceptable != null && acceptable.GetType().IsGenericType && acceptable.GetType().GetGenericTypeDefinition() == typeof(AcceptableValueList<>) && !createdOptionProviders)
+                                if (acceptable.GetType().IsGenericType && acceptable.GetType().GetGenericTypeDefinition() == typeof(AcceptableValueList<>) && !createdOptionProviders)
                                 {
                                     acceptable.CreateListOptionProvider(config, definition, currentConfigIndex);
                                 }
 
                                 // Acceptable value range stuff
-                                if (acceptable != null && acceptable.GetType().IsGenericType && acceptable.GetType().GetGenericTypeDefinition() == typeof(AcceptableValueRange<>) && !createdOptionProviders)
+                                if (acceptable.GetType().IsGenericType && acceptable.GetType().GetGenericTypeDefinition() == typeof(AcceptableValueRange<>) && !createdOptionProviders)
                                 {
                                     acceptable.CreateRangeOptionProvider(config, definition, currentConfigIndex);
                                 }
                             }
 
-                            // Create GameObject
+                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex))
+                            {
+                                tempGO = UnityEngine.Object.Instantiate(selectorPrefab, modMenuContent);
+                                SetNavigationTransform(tempGO);
+                                SetOptionProviderSelector(tempGO, currentConfigIndex);
+                                SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+                                FixLocalizedFont(tempGO);
+                                tempGO.SetActive(true);
+                            }
+                        }
+                        // Generic stuff
+                        else
+                        {
+                            // Create GameObject if provider exists
                             if (OptionsProvider.OptionProviders.ContainsKey((OptionsProvider.Option)currentConfigIndex))
                             {
                                 tempGO = UnityEngine.Object.Instantiate(selectorPrefab, modMenuContent);
@@ -375,6 +402,26 @@ namespace ModMenu
             for (int i = (int)ModMenuOptions.AutoCreatedOptions; i < lastOptionProviderIndex; i++)
             {
                 OptionsProvider.OptionProviders.Remove((OptionsProvider.Option)i);
+            }
+        }
+
+        private static bool CheckProviderValidityOrShowError(ConfigDefinition definition, int providerIndex)
+        {
+            if (OptionsProvider.OptionProviders.ContainsKey((OptionsProvider.Option)providerIndex))
+            {
+                return true;
+            }
+            else
+            {
+                ModMenu.Logger.LogWarning($"Option provider for config value \"{UnCamelCase(definition.Key)}\" is not present or not valid!");
+
+                GameObject tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
+                SetLabelText(tempGO, $"<uppercase>Error creating option \"{UnCamelCase(definition.Key)}\"!", HorizontalAlignmentOptions.Center);
+                SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+                FixLocalizedFont(tempGO);
+                tempGO.SetActive(true);
+
+                return false;
             }
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
 
@@ -12,49 +13,57 @@ namespace ModMenu
         // Creates an option provider for an AcceptableValueList type
         public static void CreateListOptionProvider(this AcceptableValueBase instance, ConfigEntryBase config, ConfigDefinition definition, int providerIndex)
         {
-            DoCreateListOptionProvider((dynamic)instance, config, definition, providerIndex);
-        }
-        private static void DoCreateListOptionProvider<T>(AcceptableValueList<T> acceptableValues, ConfigEntryBase config, ConfigDefinition definition, int providerIndex) where T : IEquatable<T>
-        {
             try
             {
-                OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] =
-                    new OptionsProvider.TextOptionProvider(
-                        MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(definition.Key)),
-                        acceptableValues.AcceptableValues.Select((i) => TomlTypeConverter.ConvertToString(i, config.SettingType)).ToArray(),
-                        false,
-                        () => acceptableValues.AcceptableValues.ToList().IndexOf((T)config.BoxedValue),
-                        (i) =>
-                        {
-                            // Set to default if index is wrong
-                            if (i < 0 || i >= acceptableValues.AcceptableValues.Count())
-                            {
-                                config.BoxedValue = config.DefaultValue;
-                                return;
-                            }
-
-                            // Set the index
-                            config.BoxedValue = acceptableValues.AcceptableValues[i];
-                        }
-                    );
+                DoCreateListOptionProvider((dynamic)instance, config, definition, providerIndex);
             }
             catch (Exception ex)
             {
                 ModMenu.Logger.LogWarning($"Error creating option provider for \"{MenuBuilder.UnCamelCase(definition.Key)}\": {ex}");
             }
         }
+        private static void DoCreateListOptionProvider<T>(AcceptableValueList<T> acceptableValues, ConfigEntryBase config, ConfigDefinition definition, int providerIndex) where T : IEquatable<T>
+        {
+
+            OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] =
+                new OptionsProvider.TextOptionProvider(
+                    MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(definition.Key)),
+                    acceptableValues.AcceptableValues.Select((i) => TomlTypeConverter.ConvertToString(i, config.SettingType)).ToArray(),
+                    false,
+                    () => acceptableValues.AcceptableValues.ToList().IndexOf((T)config.BoxedValue),
+                    (i) =>
+                    {
+                        // Set to default if index is wrong
+                        if (i < 0 || i >= acceptableValues.AcceptableValues.Count())
+                        {
+                            config.BoxedValue = config.DefaultValue;
+                            return;
+                        }
+
+                        // Set the index
+                        config.BoxedValue = acceptableValues.AcceptableValues[i];
+                    }
+                );
+        }
 
 
         // Creates an option provider for an AcceptableValueRange type
         public static void CreateRangeOptionProvider(this AcceptableValueBase instance, ConfigEntryBase config, ConfigDefinition definition, int providerIndex)
         {
-            DoCreateRangeOptionProvider((dynamic)instance, config, definition, providerIndex);
+            try
+            {
+                DoCreateRangeOptionProvider((dynamic)instance, config, definition, providerIndex);
+            }
+            catch (Exception ex)
+            {
+                ModMenu.Logger.LogWarning($"Error creating option provider for \"{MenuBuilder.UnCamelCase(definition.Key)}\": {ex}");
+            }
         }
         private static void DoCreateRangeOptionProvider<T>(AcceptableValueRange<T> acceptableValues, ConfigEntryBase config, ConfigDefinition definition, int providerIndex) where T : IComparable
         {
             OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] = new OptionsProvider.TextOptionProvider(
                 MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(definition.Key)),
-                [config.GetSerializedValue(), "1", "2"],
+                [config.GetSerializedValue(), config.GetSerializedValue(), config.GetSerializedValue()],
                 false,
                 () => 0,
                 (i) =>
@@ -80,7 +89,7 @@ namespace ModMenu
                         {
                             if (provider is OptionsProvider.TextOptionProvider textProvider)
                             {
-                                textProvider._baseOptions = [config.GetSerializedValue(), "1", "2"];
+                                textProvider._baseOptions = [config.GetSerializedValue(), config.GetSerializedValue(), config.GetSerializedValue()];
                             }
                         }
                     }
@@ -94,17 +103,12 @@ namespace ModMenu
 
 
         // Creates an option provider for an enum type
-        public static void CreateEnumOptionProvider(this ConfigEntryBase config, ConfigDefinition definition, int providerIndex)
-        {
-            DoCreateEnumOptionProvider((dynamic)config, definition, providerIndex);
-        }
-
-        private static void DoCreateEnumOptionProvider<T>(ConfigEntry<T> config, ConfigDefinition definition, int providerIndex)
+        public static void CreateEnumOptionProvider(this ConfigEntryBase config, ConfigDefinition definition, int providerIndex, BepInPlugin plugin)
         {
             try
             {
-                List<T> values = Enum.GetValues(typeof(T)).OfType<T>().ToList();
-                List<int> numbers = Enum.GetValues(typeof(T)).Cast<int>().ToList();
+                // List<T> values = Enum.GetValues(typeof(T)).OfType<T>().ToList();
+                List<int> numbers = Enum.GetValues(config.SettingType).Cast<int>().ToList();
                 List<string> names = Enum.GetNames(config.SettingType).ToList();
 
                 // Bitflag things
@@ -113,14 +117,14 @@ namespace ModMenu
                     // Find last power of 2 and get the next 2^n - 1
                     int power = numbers.FindLast((n) => n % 2 == 0) * 2 - 1;
                     int start = numbers.First();
-                    values = [];
+                    numbers = [];
                     names = [];
 
                     for (int i = start; i <= power; i++)
                     {
-                        T val = (T)Enum.Parse(typeof(T), $"{i}");
-                        values.Add(val);
-                        names.Add(val.ToString());
+                        // T val = (T)Enum.Parse(typeof(T), $"{i}");
+                        numbers.Add(i);
+                        names.Add(Enum.Format(config.SettingType, i, "F"));
                     }
                 }
 
@@ -129,20 +133,20 @@ namespace ModMenu
                         MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(definition.Key)),
                         names.ToArray(),
                         false,
-                        () => values.IndexOf(config.Value),
+                        () => numbers.IndexOf((int)config.BoxedValue),
                         (i) =>
                         {
                             try
                             {
                                 // Set to default if index is wrong
-                                if (i < 0 || i >= values.Count())
+                                if (i < 0 || i >= numbers.Count())
                                 {
                                     config.BoxedValue = config.DefaultValue;
                                     return;
                                 }
 
                                 // Set the index
-                                config.BoxedValue = values[i];
+                                config.BoxedValue = numbers[i];
                             }
                             catch (Exception ex)
                             {

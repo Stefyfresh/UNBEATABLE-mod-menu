@@ -17,7 +17,7 @@ namespace ModMenu
 
 
         public static readonly int configSectionHeight = 85;
-        public static readonly int configSectionTopMargin = 25;
+        public static readonly int configSectionTopMargin = 20;
 
 
         public static readonly int configDescriptionHeight = 24;

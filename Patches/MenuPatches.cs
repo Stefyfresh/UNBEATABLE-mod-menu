@@ -45,15 +45,35 @@ namespace ModMenu.Patches
                 // MenuBuilder.consoleInputPrefab = GameObject.Find("/JeffBezos/AllenDulles/Canvas Parent/Canvas/Console/Console Input");
 
 
-                // Make new GameObjects
+                // Make button
                 MenuBuilder.modButtonGO = UnityEngine.Object.Instantiate(keybindsButtonGO, keybindsButtonGO.transform.parent);
                 MenuBuilder.modButtonGO.name = MenuBuilder.modButtonName;
                 MenuBuilder.modButtonGO.transform.SetSiblingIndex(0);
+                MenuBuilder.modButtonGO.transform.parent.GetComponent<VerticalLayoutGroup>().spacing = MenuConstants.buttonLineSpacing;
+                MenuBuilder.modButtonGO.GetComponent<UnityEngine.EventSystems.EventTrigger>().triggers[0].callback.m_PersistentCalls.m_Calls[4].arguments.boolArgument = false; // silly code to make it not enable the keybinds menu on click
+                foreach (TextMeshProUGUI tmp in MenuBuilder.modButtonGO.GetComponentsInChildren<TextMeshProUGUI>(true))
+                {
+                    tmp.text = "<mspace=11>//<mspace=17> </mspace><cspace=0.35em>mods.";
+                    if (tmp.gameObject.GetComponent<GameObjectLocalizer>() is GameObjectLocalizer localizer) localizer.enabled = false;
+                }
+                LayoutRebuilder.ForceRebuildLayoutImmediate(MenuBuilder.modButtonGO.transform.parent as RectTransform);
+                Canvas.ForceUpdateCanvases();
 
+                // Make menu
                 MenuBuilder.modMenuGO = UnityEngine.Object.Instantiate(interfaceScreen.gameObject, interfaceScreen.parent);
                 MenuBuilder.modMenuGO.name = MenuBuilder.modMenuName;
                 MenuBuilder.modMenuGO.GetComponent<ScrollRect>().scrollSensitivity = MenuConstants.modMenuScrollSensitivity;
                 MenuBuilder.modMenuContent = MenuBuilder.modMenuGO.transform.Find("Viewport/Content");
+
+                // Faster menu transitions
+                MenuController.transitionsTransform = __instance.transform.Find("Transitions");
+                MenuController.SetFasterMenuTransitions(ModMenu.fasterMenuTransitions.Value);
+
+                // Register the menu transitions
+                MenuController.optionsTransitionsTransform = __instance.transform.Find("ScreenArea/OptionsCorner/Transitions");
+                MenuController.RegisterModMenu();
+
+                ModMenu.Logger.LogInfo("Set relevant parameters for menu GameObjects.");
 
                 // Get scroll
                 MenuBuilder.scroll = MenuBuilder.modMenuGO.GetComponent<ScrollRect>();
@@ -70,29 +90,6 @@ namespace ModMenu.Patches
                 // Build menu
                 MenuBuilder.BuildMenu(true);
 
-
-                // Set component values
-                MenuBuilder.modButtonGO.transform.parent.GetComponent<VerticalLayoutGroup>().spacing = MenuConstants.buttonLineSpacing;
-                MenuBuilder.modButtonGO.GetComponent<UnityEngine.EventSystems.EventTrigger>().triggers[0].callback.m_PersistentCalls.m_Calls[4].arguments.boolArgument = false;
-                LayoutRebuilder.ForceRebuildLayoutImmediate(MenuBuilder.modButtonGO.transform.parent as RectTransform);
-                Canvas.ForceUpdateCanvases();
-
-                // Rename the mods button
-                foreach (TextMeshProUGUI tmp in MenuBuilder.modButtonGO.GetComponentsInChildren<TextMeshProUGUI>(true))
-                {
-                    tmp.text = "<mspace=11>//<mspace=17> </mspace><cspace=0.35em>mods.";
-                    if (tmp.gameObject.GetComponent<GameObjectLocalizer>() is GameObjectLocalizer thing) thing.enabled = false;
-                }
-
-                // Faster menu transitions
-                MenuController.transitionsTransform = __instance.transform.Find("Transitions");
-                MenuController.SetFasterMenuTransitions(ModMenu.fasterMenuTransitions.Value);
-
-                // Register the menu transitions
-                MenuController.optionsTransitionsTransform = __instance.transform.Find("ScreenArea/OptionsCorner/Transitions");
-                MenuController.RegisterModMenu();
-
-                ModMenu.Logger.LogInfo("Set relevant parameters for menu GameObjects.");
             }
             catch (Exception ex)
             {
