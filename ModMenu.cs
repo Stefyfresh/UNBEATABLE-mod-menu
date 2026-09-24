@@ -36,7 +36,7 @@ namespace ModMenu
         public static ModMenu Instance { get; private set; }
 
         // Internal mod options
-        public static ConfigEntry<bool> fasterMenuTransitions;
+        // public static ConfigEntry<bool> fasterMenuTransitions;
         public static ConfigEntry<bool> showOptionDescriptions;
 
 
@@ -47,12 +47,12 @@ namespace ModMenu
 
             Instance = this;
 
-            fasterMenuTransitions = Config.Bind(
-                "General",
-                "FasterMenuTransitions",
-                false,
-                "Enables faster transitions in the arcade mode menu"
-            );
+            // fasterMenuTransitions = Config.Bind(
+            //     "General",
+            //     "FasterMenuTransitions",
+            //     false,
+            //     "Enables faster transitions in the arcade mode menu"
+            // );
             showOptionDescriptions = Config.Bind(
                 "General",
                 "ShowOptionDescriptions",

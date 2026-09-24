@@ -12,6 +12,9 @@ using System.Collections.Generic;
 using BepInEx;
 using System;
 using System.Reflection;
+using ModMenu.Keybinds;
+using FMOD.Studio;
+using FMODUnity;
 
 namespace ModMenu
 {
@@ -27,10 +30,14 @@ namespace ModMenu
         public static GameObject selectorPrefab;
         public static GameObject togglePrefab;
         public static GameObject inputPrefab;
+        public static GameObject keybindsPrefab;
+        public static GameObject originalKeybindsPrefab;
+        public static GameObject buttonPrefab;
+
         // public static GameObject consoleInputPrefab;
 
         public static Selectable firstSelectable;
-        public static Selectable optionDescriptionSelectable;
+        // public static Selectable optionDescriptionSelectable;
 
         public static Material customUIMaterial;
         public static ScrollRect scroll;
@@ -49,6 +56,8 @@ namespace ModMenu
             // Try to create the input prefab and set state accordingly
             bool inputEnabled = TryGenerateInputPrefab();
 
+            bool keybindsEnabled = TryGenerateKeybindsPrefab();
+
             CreateModMenuTextAndOptions();
 
             // Generate fields for existing plugin configs
@@ -58,17 +67,19 @@ namespace ModMenu
                 if (ConfigFinder.pluginConfigFiles.TryGetValue(pluginGUID, out ConfigFile pluginConfigFile) && pluginConfigFile.Count > 0)
                 {
                     // Create texts for the name of the plugin
-                    GameObject tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-                    SetLabelText(tempGO);
-                    FixLocalizedFont(tempGO);
-                    SetHeight(tempGO, MenuConstants.titleLabelTopMargin);
-                    tempGO.SetActive(true);
+                    if (TryCreateMenuObject(labelPrefab, out GameObject tempGO))
+                    {
+                        SetLabelText(tempGO);
+                        FixLocalizedFont(tempGO);
+                        SetHeight(tempGO, MenuConstants.titleLabelTopMargin);
+                    }
 
-                    tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-                    SetLabelText(tempGO, PadStringWithLines(ConfigFinder.pluginMetadata[pluginGUID].Name), HorizontalAlignmentOptions.Center);
-                    SetHeight(tempGO, MenuConstants.titleLabelHeight);
-                    FixLocalizedFont(tempGO);
-                    tempGO.SetActive(true);
+                    if (TryCreateMenuObject(labelPrefab, out tempGO))
+                    {
+                        SetLabelText(tempGO, PadStringWithLines(ConfigFinder.pluginMetadata[pluginGUID].Name), HorizontalAlignmentOptions.Center);
+                        SetHeight(tempGO, MenuConstants.titleLabelHeight);
+                        FixLocalizedFont(tempGO);
+                    }
 
 
                     // Group objects into sections
@@ -106,17 +117,19 @@ namespace ModMenu
                         // Create section text if there is a section
                         if (definition.Section != currentSectionName)
                         {
-                            tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-                            SetLabelText(tempGO);
-                            FixLocalizedFont(tempGO);
-                            SetHeight(tempGO, MenuConstants.configSectionTopMargin);
-                            tempGO.SetActive(true);
+                            if (TryCreateMenuObject(labelPrefab, out tempGO))
+                            {
+                                SetLabelText(tempGO);
+                                FixLocalizedFont(tempGO);
+                                SetHeight(tempGO, MenuConstants.configSectionTopMargin);
+                            }
 
-                            tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-                            SetLabelText(tempGO, definition.Section, HorizontalAlignmentOptions.Right);
-                            SetHeight(tempGO, MenuConstants.configSectionHeight);
-                            FixLocalizedFont(tempGO);
-                            tempGO.SetActive(true);
+                            if (TryCreateMenuObject(labelPrefab, out tempGO))
+                            {
+                                SetLabelText(tempGO, definition.Section, HorizontalAlignmentOptions.Right);
+                                SetHeight(tempGO, MenuConstants.configSectionHeight);
+                                FixLocalizedFont(tempGO);
+                            }
 
                             currentSectionName = definition.Section;
                         }
@@ -131,14 +144,12 @@ namespace ModMenu
                                     (b) => config.BoxedValue = b        //Setter
                                 );
 
-                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex))
+                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex) && TryCreateMenuObject(togglePrefab, out tempGO))
                             {
-                                tempGO = UnityEngine.Object.Instantiate(togglePrefab, modMenuContent);
                                 SetNavigationTransform(tempGO);
                                 SetOptionProviderToggle(tempGO, currentConfigIndex);
                                 SetHeight(tempGO, MenuConstants.optionSelectorHeight);
                                 FixLocalizedFont(tempGO);
-                                tempGO.SetActive(true);
                             }
                         }
                         // String type stuff
@@ -148,34 +159,35 @@ namespace ModMenu
                             if (!createdOptionProviders) OptionsProvider.OptionProviders[(OptionsProvider.Option)currentConfigIndex] =
                                 new OptionsProvider.ToggleOptionProvider(BeautifyString(UnCamelCase(definition.Key)), () => false, (b) => { });
 
-                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex))
+                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex) && TryCreateMenuObject(inputPrefab, out tempGO))
                             {
-                                tempGO = UnityEngine.Object.Instantiate(inputPrefab, modMenuContent);
                                 SetNavigationTransform(tempGO);
                                 SetOptionProviderInput(tempGO, config, currentConfigIndex);
                                 SetHeight(tempGO, MenuConstants.optionSelectorHeight);
                                 FixLocalizedFont(tempGO);
-                                tempGO.SetActive(true);
                             }
                         }
                         // Enum type stuff
                         else if (config.SettingType.IsEnum)
                         {
-                            // TODO: KeyCode
-                            // if (config.SettingType == typeof(KeyCode))
-                            // {
-
-                            // }
-                            if (!createdOptionProviders) config.CreateEnumOptionProvider(definition, currentConfigIndex, ConfigFinder.pluginMetadata[pluginGUID]);
-
-                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex))
+                            if (config.SettingType == typeof(KeyCode) && TryCreateMenuObject(keybindsPrefab, out tempGO) && keybindsEnabled)
                             {
-                                tempGO = UnityEngine.Object.Instantiate(selectorPrefab, modMenuContent);
                                 SetNavigationTransform(tempGO);
-                                SetOptionProviderSelector(tempGO, currentConfigIndex);
                                 SetHeight(tempGO, MenuConstants.optionSelectorHeight);
                                 FixLocalizedFont(tempGO);
-                                tempGO.SetActive(true);
+                                SetKeybindManager(tempGO, config, definition);
+                            }
+                            else
+                            {
+                                if (!createdOptionProviders) config.CreateEnumOptionProvider(definition, currentConfigIndex, ConfigFinder.pluginMetadata[pluginGUID]);
+
+                                if (CheckProviderValidityOrShowError(definition, currentConfigIndex) && TryCreateMenuObject(selectorPrefab, out tempGO))
+                                {
+                                    SetNavigationTransform(tempGO);
+                                    SetOptionProviderSelector(tempGO, currentConfigIndex);
+                                    SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+                                    FixLocalizedFont(tempGO);
+                                }
                             }
                         }
                         // Acceptable value stuff
@@ -198,28 +210,24 @@ namespace ModMenu
                                 }
                             }
 
-                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex))
+                            if (CheckProviderValidityOrShowError(definition, currentConfigIndex) && TryCreateMenuObject(selectorPrefab, out tempGO))
                             {
-                                tempGO = UnityEngine.Object.Instantiate(selectorPrefab, modMenuContent);
                                 SetNavigationTransform(tempGO);
                                 SetOptionProviderSelector(tempGO, currentConfigIndex);
                                 SetHeight(tempGO, MenuConstants.optionSelectorHeight);
                                 FixLocalizedFont(tempGO);
-                                tempGO.SetActive(true);
                             }
                         }
                         // Generic stuff
                         else
                         {
                             // Create GameObject if provider exists
-                            if (OptionsProvider.OptionProviders.ContainsKey((OptionsProvider.Option)currentConfigIndex))
+                            if (OptionsProvider.OptionProviders.ContainsKey((OptionsProvider.Option)currentConfigIndex) && TryCreateMenuObject(selectorPrefab, out tempGO))
                             {
-                                tempGO = UnityEngine.Object.Instantiate(selectorPrefab, modMenuContent);
                                 SetNavigationTransform(tempGO);
                                 SetOptionProviderSelector(tempGO, currentConfigIndex);
                                 SetHeight(tempGO, MenuConstants.optionSelectorHeight);
                                 FixLocalizedFont(tempGO);
-                                tempGO.SetActive(true);
                             }
                             else
                             {
@@ -250,6 +258,13 @@ namespace ModMenu
                 if (scroll) scroll.verticalNormalizedPosition = 1;
             }
 
+            // Set selectable
+            CustomUINavigation nav = modButtonGO.GetComponent<CustomUINavigation>();
+            if (nav)
+            {
+                nav.rightNavigation.explicitSelectables = [firstSelectable];
+            }
+
             ModMenu.Logger.LogInfo("Successfully built mod menu.");
         }
 
@@ -272,28 +287,30 @@ namespace ModMenu
         private static void CreateModMenuTextAndOptions()
         {
             // Create mod menu label
-            GameObject tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-            SetLabelText(tempGO, PadStringWithLines("Mod Menu"), HorizontalAlignmentOptions.Center);
-            SetHeight(tempGO, MenuConstants.titleLabelHeight);
-            FixLocalizedFont(tempGO);
-            tempGO.SetActive(true);
+            if (TryCreateMenuObject(labelPrefab, out GameObject tempGO))
+            {
+                SetLabelText(tempGO, PadStringWithLines("Mod Menu"), HorizontalAlignmentOptions.Center);
+                SetHeight(tempGO, MenuConstants.titleLabelHeight);
+                FixLocalizedFont(tempGO);
+            }
 
             // Create faster menu transitions option
-            if (!createdOptionProviders) OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)ModMenuOptions.FasterTransitions,
-                new OptionsProvider.ToggleOptionProvider(
-                    BeautifyString("Faster Menu Transitions"),
-                    () => ModMenu.fasterMenuTransitions.Value,
-                    MenuController.SetFasterMenuTransitions
-                )
-            );
+            // if (!createdOptionProviders) OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)ModMenuOptions.FasterTransitions,
+            //     new OptionsProvider.ToggleOptionProvider(
+            //         BeautifyString("Faster Menu Transitions"),
+            //         () => ModMenu.fasterMenuTransitions.Value,
+            //         MenuController.SetFasterMenuTransitions
+            //     )
+            // );
 
-            tempGO = UnityEngine.Object.Instantiate(togglePrefab, modMenuContent);
-            SetNavigationTransform(tempGO);
-            firstSelectable = SetOptionProviderToggle(tempGO, (int)ModMenuOptions.FasterTransitions);
-            FixLocalizedFont(tempGO);
-            SetHeight(tempGO, MenuConstants.optionSelectorHeight);
-            tempGO.SetActive(true);
-            CreateDescriptionIfNeeded(ModMenu.fasterMenuTransitions);
+            // if (TryCreateMenuObject(togglePrefab, out tempGO))
+            // {
+            //     SetNavigationTransform(tempGO);
+            //     firstSelectable = SetOptionProviderToggle(tempGO, (int)ModMenuOptions.FasterTransitions);
+            //     FixLocalizedFont(tempGO);
+            //     SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+            //     CreateDescriptionIfNeeded(ModMenu.fasterMenuTransitions);
+            // }
 
             // Create descriptions option
             if (!createdOptionProviders) OptionsProvider.OptionProviders.TryAdd((OptionsProvider.Option)ModMenuOptions.ShowOptionDescriptions,
@@ -304,13 +321,14 @@ namespace ModMenu
                 )
             );
 
-            tempGO = UnityEngine.Object.Instantiate(togglePrefab, modMenuContent);
-            SetNavigationTransform(tempGO);
-            optionDescriptionSelectable = SetOptionProviderToggle(tempGO, (int)ModMenuOptions.ShowOptionDescriptions);
-            FixLocalizedFont(tempGO);
-            SetHeight(tempGO, MenuConstants.optionSelectorHeight);
-            tempGO.SetActive(true);
-            CreateDescriptionIfNeeded(ModMenu.showOptionDescriptions);
+            if (TryCreateMenuObject(togglePrefab, out tempGO))
+            {
+                SetNavigationTransform(tempGO);
+                firstSelectable = SetOptionProviderToggle(tempGO, (int)ModMenuOptions.ShowOptionDescriptions);
+                FixLocalizedFont(tempGO);
+                SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+                CreateDescriptionIfNeeded(ModMenu.showOptionDescriptions);
+            }
         }
 
 
@@ -327,20 +345,19 @@ namespace ModMenu
                     GameObject tempGO;
                     foreach (string line in SplitLineIntoChunks(description, "\n", MenuConstants.configDescriptionLength))
                     {
-                        if (!line.IsNullOrWhiteSpace())
+                        if (!line.IsNullOrWhiteSpace() && TryCreateMenuObject(labelPrefab, out tempGO))
                         {
-                            tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
                             SetLabelText(tempGO, line, HorizontalAlignmentOptions.Left);
                             SetHeight(tempGO, MenuConstants.configDescriptionHeight);
                             FixLocalizedFont(tempGO);
-                            tempGO.SetActive(true);
                         }
                     }
-                    tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-                    SetLabelText(tempGO);
-                    FixLocalizedFont(tempGO);
-                    SetHeight(tempGO, MenuConstants.configDescriptionBottomMargin);
-                    tempGO.SetActive(true);
+                    if (TryCreateMenuObject(labelPrefab, out tempGO))
+                    {
+                        SetLabelText(tempGO);
+                        FixLocalizedFont(tempGO);
+                        SetHeight(tempGO, MenuConstants.configDescriptionBottomMargin);
+                    }
                 }
             }
         }
@@ -349,17 +366,18 @@ namespace ModMenu
         private static void CreatePluginShowOverrides(int currentConfigIndex)
         {
             // Create label
-            GameObject tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-            SetLabelText(tempGO);
-            FixLocalizedFont(tempGO);
-            SetHeight(tempGO, MenuConstants.titleLabelTopMargin);
-            tempGO.SetActive(true);
-
-            tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-            SetLabelText(tempGO, PadStringWithLines("Show in Mod Menu"), HorizontalAlignmentOptions.Center);
-            SetHeight(tempGO, MenuConstants.titleLabelHeight);
-            FixLocalizedFont(tempGO);
-            tempGO.SetActive(true);
+            if (TryCreateMenuObject(labelPrefab, out GameObject tempGO))
+            {
+                SetLabelText(tempGO);
+                FixLocalizedFont(tempGO);
+                SetHeight(tempGO, MenuConstants.titleLabelTopMargin);
+            }
+            if (TryCreateMenuObject(labelPrefab, out tempGO))
+            {
+                SetLabelText(tempGO, PadStringWithLines("Show in Mod Menu"), HorizontalAlignmentOptions.Center);
+                SetHeight(tempGO, MenuConstants.titleLabelHeight);
+                FixLocalizedFont(tempGO);
+            }
 
             // Create options
             foreach (BepInPlugin plugin in ConfigFinder.pluginMetadata.Values)
@@ -378,12 +396,13 @@ namespace ModMenu
                             }
                         );
 
-                    tempGO = UnityEngine.Object.Instantiate(togglePrefab, modMenuContent);
-                    SetNavigationTransform(tempGO);
-                    SetOptionProviderToggle(tempGO, currentConfigIndex);
-                    SetHeight(tempGO, MenuConstants.optionSelectorHeight);
-                    FixLocalizedFont(tempGO);
-                    tempGO.SetActive(true);
+                    if (TryCreateMenuObject(togglePrefab, out tempGO))
+                    {
+                        SetNavigationTransform(tempGO);
+                        SetOptionProviderToggle(tempGO, currentConfigIndex);
+                        SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+                        FixLocalizedFont(tempGO);
+                    }
 
                     CreateDescriptionIfNeeded($"Show or hide all configuration for plugin \"{plugin.Name}\"");
 
@@ -415,11 +434,12 @@ namespace ModMenu
             {
                 ModMenu.Logger.LogWarning($"Option provider for config value \"{UnCamelCase(definition.Key)}\" is not present or not valid!");
 
-                GameObject tempGO = UnityEngine.Object.Instantiate(labelPrefab, modMenuContent);
-                SetLabelText(tempGO, $"<uppercase>Error creating option \"{UnCamelCase(definition.Key)}\"!", HorizontalAlignmentOptions.Center);
-                SetHeight(tempGO, MenuConstants.optionSelectorHeight);
-                FixLocalizedFont(tempGO);
-                tempGO.SetActive(true);
+                if (TryCreateMenuObject(labelPrefab, out GameObject tempGO))
+                {
+                    SetLabelText(tempGO, $"<uppercase>Error creating option \"{UnCamelCase(definition.Key)}\"!", HorizontalAlignmentOptions.Center);
+                    SetHeight(tempGO, MenuConstants.optionSelectorHeight);
+                    FixLocalizedFont(tempGO);
+                }
 
                 return false;
             }
@@ -474,15 +494,40 @@ namespace ModMenu
 
         public static string PadStringWithLines(string str, int length)
         {
+            int spacesTot = MenuConstants.titleLabelSpacePadding * 2;
             string output = str;
-            if (str.Length + 2 < length)
+            if (str.Length + MenuConstants.titleLabelSpacePadding < length)
             {
-                int numDashesPerSide = (length - str.Length) / 2 - 1;
-                output = new string('-', numDashesPerSide) + " " + str + " " + new string('-', numDashesPerSide);
+                int numDashesPerSide = (length - str.Length) / 2 - MenuConstants.titleLabelSpacePadding;
+                output = new string('-', numDashesPerSide) + new string(' ', spacesTot) + str + new string(' ', spacesTot) + new string('-', numDashesPerSide);
             }
             return output;
         }
 
+
+        private static bool TryCreateMenuObject(GameObject prefab, out GameObject created)
+        {
+            if (prefab != null)
+            {
+                created = UnityEngine.Object.Instantiate(prefab, modMenuContent);
+                if (created == null)
+                {
+                    ModMenu.Logger.LogWarning("Menu object was instantiated as null! Ignoring.");
+                    return false;
+                }
+                else
+                {
+                    created.SetActive(true);
+                    return true;
+                }
+            }
+            else
+            {
+                ModMenu.Logger.LogWarning("A menu option was created with a null prefab! Ignoring.");
+                created = null;
+                return false;
+            }
+        }
 
 
         public static void SetHeight(GameObject gameObject, int height)
@@ -510,7 +555,7 @@ namespace ModMenu
 
         private static void FixLocalizedFont(GameObject gameObject)
         {
-            LocalizedFont localizedFont = gameObject.GetComponent<LocalizedFont>();
+            LocalizedFont localizedFont = gameObject.GetComponentInChildren<LocalizedFont>(true);
             if (localizedFont != null)
             {
                 UnityEngine.Object.DestroyImmediate(localizedFont);
@@ -587,11 +632,45 @@ namespace ModMenu
             return toggle;
         }
 
+        private static void SetKeybindManager(GameObject gameObject, ConfigEntryBase config, ConfigDefinition definition)
+        {
+            OptionKeybindSelector selector = gameObject.GetComponentInChildren<OptionKeybindSelector>();
+            CustomUINavigation nav = gameObject.GetComponentInChildren<CustomUINavigation>();
+            if (selector && nav)
+            {
+                GameObject button = selector.gameObject;
+
+                gameObject.transform.Find("Name").GetComponent<TextMeshProUGUI>().text = "<mspace=11>//<mspace=17> </mspace><cspace=0.35em>" + BeautifyString(UnCamelCase(definition.Key));
+
+                EventReference menuAcceptEvent = selector.menuAcceptEvent;
+                ArcadeKeybindMenu menu = selector.menu;
+                TextMeshProUGUI setting = selector.setting;
+
+                CustomUINavigation.NavigationDirection upNavigation = nav.upNavigation;
+                CustomUINavigation.NavigationDirection downNavigation = nav.downNavigation;
+                CustomUINavigation.NavigationDirection leftNavigation = nav.leftNavigation;
+                CustomUINavigation.NavigationDirection rightNavigation = nav.rightNavigation;
+
+                UnityEngine.Object.DestroyImmediate(nav);
+                UnityEngine.Object.DestroyImmediate(selector);
+
+                ModMenuKeybindManager keybinds = button.AddComponent<ModMenuKeybindManager>();
+                keybinds.Init(menuAcceptEvent, menu, setting, config as ConfigEntry<KeyCode>);
+                setting.horizontalAlignment = HorizontalAlignmentOptions.Center;
+
+                CustomUINavigation newNav = button.AddComponent<CustomUINavigation>();
+                newNav.upNavigation = upNavigation;
+                newNav.downNavigation = downNavigation;
+                newNav.leftNavigation = leftNavigation;
+                newNav.rightNavigation = rightNavigation;
+            }
+        }
+
 
         public static void SetShowOptionDescriptions(bool enabled)
         {
             ModMenu.showOptionDescriptions.Value = enabled;
-            if (TryRebuildMenu(true)) optionDescriptionSelectable?.Select();
+            if (TryRebuildMenu(true)) firstSelectable?.Select();
         }
 
         // private static void SetTextMode(GameObject gameObject, FontStyles style)
@@ -678,6 +757,37 @@ namespace ModMenu
             {
                 ModMenu.Logger.LogWarning($"Failed to create input prefab! {ex}");
                 inputPrefab?.SetActive(false);
+                return false;
+            }
+        }
+
+
+        public static bool TryGenerateKeybindsPrefab()
+        {
+            try
+            {
+                // Create and get objects
+                keybindsPrefab = UnityEngine.Object.Instantiate(originalKeybindsPrefab, modMenuContent);
+                keybindsPrefab.name = "OptionKeybinds";
+
+                keybindsPrefab.transform.Find("Primary").gameObject.SetActive(false);
+                // RectTransform rect = keybindsPrefab.transform.Find("Secondary").transform as RectTransform;
+                // rect.sizeDelta = new Vector2(300, rect.sizeDelta.y);
+                keybindsPrefab.transform.Find("Secondary").GetComponent<LayoutElement>().preferredWidth = MenuConstants.optionSelectorWidth;
+
+                // OptionKeybindSelector selector = keybindsPrefab.GetComponentInChildren<OptionKeybindSelector>();
+                // if (selector) selector.enabled = false;
+
+                // HorizontalLayoutGroup horizontalLayout = keybindsPrefab.GetComponent<HorizontalLayoutGroup>();
+                // if (horizontalLayout) horizontalLayout.childControlWidth = false;
+
+                keybindsPrefab?.SetActive(false);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ModMenu.Logger.LogWarning($"Failed to create keybinds prefab! {ex}");
+                // keybindsPrefab?.SetActive(false);
                 return false;
             }
         }

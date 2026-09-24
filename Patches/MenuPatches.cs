@@ -36,13 +36,13 @@ namespace ModMenu.Patches
             try
             {
                 // Get existing GameObjects
-                GameObject keybindsButtonGO = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Tabs/Keybinds").gameObject;
+                GameObject keybindsButtonGO = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Tabs/Keybinds")?.gameObject;
                 Transform interfaceScreen = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Interface");
-                // MenuBuilder.chartOffsetGO = __instance.transform.Find("Categories/Gameplay/Viewport/Content/OptionSelector (14)").gameObject;
-                MenuBuilder.labelPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Keybinds/Viewport/Content/LabelStandard").gameObject;
-                MenuBuilder.selectorPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Graphics/Viewport/Content/OptionSelector").gameObject;
-                MenuBuilder.togglePrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Graphics/Viewport/Content/OptionToggle").gameObject;
-                // MenuBuilder.consoleInputPrefab = GameObject.Find("/JeffBezos/AllenDulles/Canvas Parent/Canvas/Console/Console Input");
+                MenuBuilder.labelPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Keybinds/Viewport/Content/LabelStandard")?.gameObject;
+                MenuBuilder.selectorPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Graphics/Viewport/Content/OptionSelector")?.gameObject;
+                MenuBuilder.togglePrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Graphics/Viewport/Content/OptionToggle")?.gameObject;
+                MenuBuilder.originalKeybindsPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Keybinds/Viewport/Content/MoveUpKey")?.gameObject;
+                MenuBuilder.buttonPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Keybinds/Viewport/Content/ResetKeybinds")?.gameObject;
 
 
                 // Make button
@@ -66,14 +66,13 @@ namespace ModMenu.Patches
                 MenuBuilder.modMenuContent = MenuBuilder.modMenuGO.transform.Find("Viewport/Content");
 
                 // Faster menu transitions
-                MenuController.transitionsTransform = __instance.transform.Find("Transitions");
-                MenuController.SetFasterMenuTransitions(ModMenu.fasterMenuTransitions.Value);
+                // MenuController.transitionsTransform = __instance.transform.Find("Transitions");
+                // MenuController.SetFasterMenuTransitions(ModMenu.fasterMenuTransitions.Value);
 
                 // Register the menu transitions
-                MenuController.optionsTransitionsTransform = __instance.transform.Find("ScreenArea/OptionsCorner/Transitions");
-                MenuController.RegisterModMenu();
+                MenuTransitionsController.optionsTransitionsTransform = __instance.transform.Find("ScreenArea/OptionsCorner/Transitions");
+                MenuTransitionsController.RegisterModMenu();
 
-                ModMenu.Logger.LogInfo("Set relevant parameters for menu GameObjects.");
 
                 // Get scroll
                 MenuBuilder.scroll = MenuBuilder.modMenuGO.GetComponent<ScrollRect>();
@@ -87,9 +86,10 @@ namespace ModMenu.Patches
                 // Set selectable for going back
                 MenuBuilder.modMenuGO.GetComponent<UIFocusOnButton>().selectables = [MenuBuilder.modButtonGO];
 
+                ModMenu.Logger.LogInfo("Set relevant parameters for menu GameObjects.");
+
                 // Build menu
                 MenuBuilder.BuildMenu(true);
-
             }
             catch (Exception ex)
             {
@@ -147,6 +147,42 @@ namespace ModMenu.Patches
         {
             int numMods = ModMenu.Instance.transform.GetComponents<BaseUnityPlugin>().Length;
             __instance.VersionNumber.text = $"v{Application.version} ({numMods} {(numMods == 1 ? "MOD" : "MODS")} LOADED)";
+        }
+    }
+
+
+
+    [HarmonyPatch(typeof(ArcadeSongList))]
+    [HarmonyPatch("Update")]
+    internal class MenuUpdatePatch
+    {
+        static void Postfix()
+        {
+            // Code to run when menu is active
+            if (MenuTransitionsController.showMenu && MenuBuilder.modMenuGO && MenuBuilder.modMenuGO.transform.parent.gameObject.activeInHierarchy)
+            {
+                // Enable menu screen when menu is active
+                bool wantedState = true;
+                foreach (Transform child in MenuBuilder.modMenuGO.transform.parent)
+                {
+                    if (child.gameObject.activeSelf && child.name != MenuBuilder.modMenuName)
+                    {
+                        wantedState = false;
+                    }
+                }
+
+                if (!MenuTransitionsController.hasLoaded && wantedState == true)
+                {
+                    // Move the scrollbar to the top
+                    MenuBuilder.modMenuGO.SetActive(true);
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(MenuBuilder.modMenuContent as RectTransform);
+                    if (MenuBuilder.scroll) MenuBuilder.scroll.verticalNormalizedPosition = 1;
+
+                    MenuTransitionsController.hasLoaded = true;
+                }
+
+                if (MenuBuilder.modMenuGO.activeSelf != wantedState) MenuBuilder.modMenuGO.SetActive(wantedState);
+            }
         }
     }
 }

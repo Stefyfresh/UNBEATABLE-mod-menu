@@ -109,7 +109,7 @@ namespace ModMenu
             {
                 // List<T> values = Enum.GetValues(typeof(T)).OfType<T>().ToList();
                 List<int> numbers = Enum.GetValues(config.SettingType).Cast<int>().ToList();
-                List<string> names = Enum.GetNames(config.SettingType).ToList();
+                List<string> names = Enum.GetNames(config.SettingType).Select(MenuBuilder.UnCamelCase).ToList();
 
                 // Bitflag things
                 if (config.SettingType.GetCustomAttributes(typeof(FlagsAttribute), inherit: true).Any())
@@ -124,7 +124,7 @@ namespace ModMenu
                     {
                         // T val = (T)Enum.Parse(typeof(T), $"{i}");
                         numbers.Add(i);
-                        names.Add(Enum.Format(config.SettingType, i, "F"));
+                        names.Add(MenuBuilder.UnCamelCase(Enum.Format(config.SettingType, i, "F")));
                     }
                 }
 

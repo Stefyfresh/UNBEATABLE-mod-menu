@@ -52,11 +52,14 @@
     <Reference Include="Newtonsoft.Json" Publicize="true">
       <HintPath>..\Hints\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="FMODUnity" Publicize="true">
+      <HintPath>..\Hints\FMODUnity.dll</HintPath>
+    </Reference>
     <!-- <Reference Include="DOTween">
       <HintPath>..\Hints\DOTween.dll</HintPath>
     </Reference> -->
-    <!-- <Reference Include="Rewired_Core" Publicize="true">
+    <Reference Include="Rewired_Core" Publicize="true">
       <HintPath>..\Hints\Rewired_Core.dll</HintPath>
-    </Reference> -->
+    </Reference>
   </ItemGroup>
 </Project>
