@@ -150,6 +150,8 @@ namespace ModMenu.Patches
         }
     }
 
+    // TODO: add text to arcade menu "<cspace=0.5em><voffset=-14em><align="left"><space=-41em><size=200%>UNBEATABLE v2.3.1.1 (40 mods loaded)"
+
 
 
     [HarmonyPatch(typeof(ArcadeSongList))]

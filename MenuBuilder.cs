@@ -34,8 +34,6 @@ namespace ModMenu
         public static GameObject originalKeybindsPrefab;
         public static GameObject buttonPrefab;
 
-        // public static GameObject consoleInputPrefab;
-
         public static Selectable firstSelectable;
         // public static Selectable optionDescriptionSelectable;
 
