@@ -16,6 +16,19 @@ namespace ModMenu
         public static List<string> pluginGUIDs = [];
         public static Dictionary<string, ConfigFile> pluginConfigFiles = [];
         public static Dictionary<string, BepInPlugin> pluginMetadata = [];
+
+        public static int NumConfigurableMods { get { return pluginConfigFiles.Count(kvp => kvp.Value.Count > 0); } }
+        public static int NumConfigOptions
+        {
+            get
+            {
+                int configs = 0;
+                pluginConfigFiles.Values.ToList().ForEach(configFile => configs += configFile.Count);
+                return configs;
+            }
+        }
+
+
         public static void Init()
         {
             BaseUnityPlugin[] plugins = ModMenu.Instance?.gameObject?.GetComponents<BaseUnityPlugin>();

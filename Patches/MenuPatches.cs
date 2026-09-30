@@ -15,7 +15,7 @@ using BepInEx;
 namespace ModMenu.Patches
 {
     [HarmonyPatch(typeof(UIFocusOnButton))]
-    [HarmonyPatch("Awake")]
+    [HarmonyPatch(nameof(UIFocusOnButton.Awake))]
     internal class FixMenuSelectables
     {
         static void Postfix(ref UIFocusOnButton __instance)
@@ -28,80 +28,34 @@ namespace ModMenu.Patches
 
 
     [HarmonyPatch(typeof(ArcadeSongList))]
-    [HarmonyPatch("Awake")]
+    [HarmonyPatch(nameof(ArcadeSongList.Awake))]
     internal class ArcadeSongListAwakePatch
     {
         static void Postfix(ref ArcadeSongList __instance)
         {
-            try
+            // Initialize and create mod menu
+            MenuBuilder.Init(__instance.transform);
+
+            // Create mods text on arcade mode screen
+            // TODO: add text to arcade menu "<cspace=0.5em><voffset=-14em><align="left"><space=-41em><size=200%>UNBEATABLE v2.3.1.1 (40 mods loaded)"
+            Transform logoText = __instance.transform.Find("ScreenArea/RecurentElements/Logo/Subtitle");
+            Transform bpm = __instance.transform.Find("ScreenArea/RecurentElements/BpmCounter");
+            if (logoText && bpm)
             {
-                // Get existing GameObjects
-                GameObject keybindsButtonGO = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Tabs/Keybinds")?.gameObject;
-                Transform interfaceScreen = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Interface");
-                MenuBuilder.labelPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Keybinds/Viewport/Content/LabelStandard")?.gameObject;
-                MenuBuilder.selectorPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Graphics/Viewport/Content/OptionSelector")?.gameObject;
-                MenuBuilder.togglePrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Graphics/Viewport/Content/OptionToggle")?.gameObject;
-                MenuBuilder.originalKeybindsPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Keybinds/Viewport/Content/MoveUpKey")?.gameObject;
-                MenuBuilder.buttonPrefab = __instance.transform.Find("ScreenArea/OptionsCorner/FullOptionsMenu/Categories/Keybinds/Viewport/Content/ResetKeybinds")?.gameObject;
-
-
-                // Make button
-                MenuBuilder.modButtonGO = UnityEngine.Object.Instantiate(keybindsButtonGO, keybindsButtonGO.transform.parent);
-                MenuBuilder.modButtonGO.name = MenuBuilder.modButtonName;
-                MenuBuilder.modButtonGO.transform.SetSiblingIndex(0);
-                MenuBuilder.modButtonGO.transform.parent.GetComponent<VerticalLayoutGroup>().spacing = MenuConstants.buttonLineSpacing;
-                MenuBuilder.modButtonGO.GetComponent<UnityEngine.EventSystems.EventTrigger>().triggers[0].callback.m_PersistentCalls.m_Calls[4].arguments.boolArgument = false; // silly code to make it not enable the keybinds menu on click
-                foreach (TextMeshProUGUI tmp in MenuBuilder.modButtonGO.GetComponentsInChildren<TextMeshProUGUI>(true))
+                TextMeshProUGUI tmp = logoText.GetComponent<TextMeshProUGUI>();
+                if (tmp)
                 {
-                    tmp.text = "<mspace=11>//<mspace=17> </mspace><cspace=0.35em>mods.";
-                    if (tmp.gameObject.GetComponent<GameObjectLocalizer>() is GameObjectLocalizer localizer) localizer.enabled = false;
+                    bpm.localPosition = new Vector3(bpm.localPosition.x, bpm.localPosition.y + 30, bpm.localPosition.z);
+                    tmp.maxVisibleCharacters = 9999;
+                    tmp.text += $"<br><cspace=0.25em><voffset=-27.5em><align=\"center\"><space=-41em><size=160%>// v{Application.version} ({ModMenu.NumLoadedMods} {(ModMenu.NumLoadedMods == 1 ? "MOD" : "MODS")} LOADED)";
                 }
-                LayoutRebuilder.ForceRebuildLayoutImmediate(MenuBuilder.modButtonGO.transform.parent as RectTransform);
-                Canvas.ForceUpdateCanvases();
-
-                // Make menu
-                MenuBuilder.modMenuGO = UnityEngine.Object.Instantiate(interfaceScreen.gameObject, interfaceScreen.parent);
-                MenuBuilder.modMenuGO.name = MenuBuilder.modMenuName;
-                MenuBuilder.modMenuGO.GetComponent<ScrollRect>().scrollSensitivity = MenuConstants.modMenuScrollSensitivity;
-                MenuBuilder.modMenuContent = MenuBuilder.modMenuGO.transform.Find("Viewport/Content");
-
-                // Faster menu transitions
-                // MenuController.transitionsTransform = __instance.transform.Find("Transitions");
-                // MenuController.SetFasterMenuTransitions(ModMenu.fasterMenuTransitions.Value);
-
-                // Register the menu transitions
-                MenuTransitionsController.optionsTransitionsTransform = __instance.transform.Find("ScreenArea/OptionsCorner/Transitions");
-                MenuTransitionsController.RegisterModMenu();
-
-
-                // Get scroll
-                MenuBuilder.scroll = MenuBuilder.modMenuGO.GetComponent<ScrollRect>();
-
-                // Get UI Material
-                MenuBuilder.customUIMaterial = __instance.GetComponentInChildren<RawImage>().material;
-
-                // Set spacing
-                MenuBuilder.modMenuContent.GetComponent<VerticalLayoutGroup>().spacing = MenuConstants.menuLineSpacing;
-
-                // Set selectable for going back
-                MenuBuilder.modMenuGO.GetComponent<UIFocusOnButton>().selectables = [MenuBuilder.modButtonGO];
-
-                ModMenu.Logger.LogInfo("Set relevant parameters for menu GameObjects.");
-
-                // Build menu
-                MenuBuilder.BuildMenu(true);
             }
-            catch (Exception ex)
-            {
-                ModMenu.Logger.LogWarning($"Could not create mod menu! {ex}");
-            }
-
         }
     }
 
 
     [HarmonyPatch(typeof(OptionsProvider.OptionProvider))]
-    [HarmonyPatch("Name", MethodType.Getter)]
+    [HarmonyPatch(nameof(OptionsProvider.OptionProvider.Name), MethodType.Getter)]
     internal class OptionsProviderNamePatch
     {
         static void Postfix(ref OptionsProvider.OptionProvider __instance, ref string __result)
@@ -116,7 +70,7 @@ namespace ModMenu.Patches
 
 
     [HarmonyPatch(typeof(FMODButton))]
-    [HarmonyPatch("OnPointerClick")]
+    [HarmonyPatch(nameof(FMODButton.OnPointerClick))]
     internal class SelectCorrectSelectablePointer
     {
         static void Postfix(ref FMODButton __instance)
@@ -128,7 +82,7 @@ namespace ModMenu.Patches
 
 
     [HarmonyPatch(typeof(FMODButton))]
-    [HarmonyPatch("OnSubmit")]
+    [HarmonyPatch(nameof(FMODButton.OnSubmit))]
     internal class SelectCorrectSelectable
     {
         static void Postfix(ref FMODButton __instance)
@@ -140,22 +94,20 @@ namespace ModMenu.Patches
 
 
     [HarmonyPatch(typeof(MainMenuController))]
-    [HarmonyPatch("Start")]
+    [HarmonyPatch(nameof(MainMenuController.Start))]
     internal class MainMenuControllerStartPatch
     {
         static void Postfix(ref MainMenuController __instance)
         {
-            int numMods = ModMenu.Instance.transform.GetComponents<BaseUnityPlugin>().Length;
-            __instance.VersionNumber.text = $"v{Application.version} ({numMods} {(numMods == 1 ? "MOD" : "MODS")} LOADED)";
+            __instance.VersionNumber.text = $"v{Application.version} ({ModMenu.NumLoadedMods} {(ModMenu.NumLoadedMods == 1 ? "MOD" : "MODS")} LOADED)";
         }
     }
 
-    // TODO: add text to arcade menu "<cspace=0.5em><voffset=-14em><align="left"><space=-41em><size=200%>UNBEATABLE v2.3.1.1 (40 mods loaded)"
 
 
 
     [HarmonyPatch(typeof(ArcadeSongList))]
-    [HarmonyPatch("Update")]
+    [HarmonyPatch(nameof(ArcadeSongList.Update))]
     internal class MenuUpdatePatch
     {
         static void Postfix()

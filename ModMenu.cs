@@ -33,11 +33,13 @@ namespace ModMenu
         public const string PLUGIN_VERSION = "0.6.0";
         internal static new ManualLogSource Logger;
 
-        public static ModMenu Instance { get; private set; }
-
         // Internal mod options
-        // public static ConfigEntry<bool> fasterMenuTransitions;
         public static ConfigEntry<bool> showOptionDescriptions;
+        public static ConfigEntry<bool> sortOptions;
+
+
+        public static ModMenu Instance { get; private set; }
+        public static int NumLoadedMods { get { return Instance.transform.GetComponents<BaseUnityPlugin>().Length; } }
 
 
         private void Awake()
@@ -47,17 +49,18 @@ namespace ModMenu
 
             Instance = this;
 
-            // fasterMenuTransitions = Config.Bind(
-            //     "General",
-            //     "FasterMenuTransitions",
-            //     false,
-            //     "Enables faster transitions in the arcade mode menu"
-            // );
             showOptionDescriptions = Config.Bind(
                 "General",
                 "ShowOptionDescriptions",
                 true,
                 "Shows a detailed description for all mod menu options, if available"
+            );
+
+            sortOptions = Config.Bind(
+                "General",
+                "SortMenuOptions",
+                true,
+                "Sorts all the configuration options for each plugin's section in alphabetical order.\nIf disabled, the options are sorted in the order they are created by the plugin."
             );
 
             var harmony = new Harmony(PLUGIN_GUID);

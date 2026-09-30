@@ -4,6 +4,7 @@ namespace ModMenu
     {
         FasterTransitions = 100,
         ShowOptionDescriptions = 101,
+        SortMenuOptions = 102,
         AutoCreatedOptions = 105
     }
 }
