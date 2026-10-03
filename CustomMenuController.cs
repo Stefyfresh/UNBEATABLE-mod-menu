@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace ModMenu
 {
-    public static class MenuTransitionsController
+    public static class CustomMenuController
     {
         public static bool showMenu;
         public static bool hasLoaded;
@@ -45,6 +45,7 @@ namespace ModMenu
             if (optionsTransitionsTransform)
             {
                 UITransition enterTransition = optionsTransitionsTransform.Find("None-Options")?.GetComponent<UITransition>();
+                enterTransition.elementToSelect = MenuBuilder.modButtonGO;
                 enterTransition.OnTransitionFinished += () =>
                 {
                     showMenu = true;

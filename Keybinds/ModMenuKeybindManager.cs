@@ -40,7 +40,17 @@ namespace ModMenu.Keybinds
             this.keybindMenu = keybindMenu;
             this.settingText = settingText;
             this.config = config;
-            settingText.text = MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(config.Value.ToString()));
+            settingText.text = TextUtils.BeautifyString(TextUtils.UnCamelCase(config.Value.ToString()));
+
+            // Fix navigation
+            Navigation nav = navigation;
+            nav.mode = Navigation.Mode.None;
+            navigation = nav;
+
+            RectTransform rect = transform as RectTransform;
+            Vector3 oldPos = rect.position;
+            rect.pivot = new Vector2(-0.835975f, rect.pivot.y);
+            rect.position = oldPos;
         }
 
         public void OnPointerClick(PointerEventData eventData)
@@ -56,20 +66,21 @@ namespace ModMenu.Keybinds
         private void StartListening()
         {
             SelectIfNoneSelected.elementToSelect = gameObject;
-            if (EventSystem.current)
-            {
-                EventSystem.current.firstSelectedGameObject = gameObject;
-            }
+            if (EventSystem.current) EventSystem.current.firstSelectedGameObject = gameObject;
+
             JeffBezosController.instance.DisableUIInputs();
             RuntimeManager.PlayOneShot(acceptSound, default(Vector3));
             keybindMenu.rewired.controllers.maps.SetAllMapsEnabled(false);
+            config.Value = KeyCode.None;
             StartCoroutine(StartListeningDelayed());
         }
 
         private IEnumerator StartListeningDelayed()
         {
             yield return new WaitForSeconds(0.1f);
-            settingText.text = MenuBuilder.BeautifyString("Rebinding");
+            settingText.text = TextUtils.BeautifyString("Rebinding");
+
+            KeyCode newKeyCode = KeyCode.None;
 
             bool foundKey = false;
             float bindTime = 0;
@@ -80,7 +91,7 @@ namespace ModMenu.Keybinds
                 if (numDots != prevNumDots)
                 {
                     prevNumDots = numDots;
-                    settingText.text = MenuBuilder.BeautifyString("Rebinding" + new string('.', numDots));
+                    settingText.text = TextUtils.BeautifyString("Rebinding" + new string('.', numDots));
                 }
 
                 if (Input.GetKeyDown(KeyCode.Escape))
@@ -95,7 +106,7 @@ namespace ModMenu.Keybinds
                     {
                         if (Input.GetKeyDown(key) && !modifierKeys.Contains(key))
                         {
-                            config.Value = key;
+                            newKeyCode = key;
                             foundKey = true;
                             break;
                         }
@@ -108,8 +119,10 @@ namespace ModMenu.Keybinds
 
             JeffBezosController.instance.EnableUIInputs();
             ArcadeRewiredManager.UpdateMaps(true);
-            FileStorage.SaveSettings();
-            settingText.text = MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(config.Value.ToString()));
+            settingText.text = TextUtils.BeautifyString(TextUtils.UnCamelCase(newKeyCode.ToString()));
+
+            yield return new WaitForSeconds(0.1f);
+            config.Value = newKeyCode;
         }
     }
 }

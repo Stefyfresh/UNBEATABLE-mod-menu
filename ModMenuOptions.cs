@@ -2,9 +2,10 @@ namespace ModMenu
 {
     public enum ModMenuOptions
     {
-        FasterTransitions = 100,
-        ShowOptionDescriptions = 101,
-        SortMenuOptions = 102,
-        AutoCreatedOptions = 105
+        ShowOptionDescriptions = 200,
+        SortMenuOptions = 201,
+        MenuSpacing = 202,
+        ShowVersionText = 203,
+        AutoCreatedOptions = 205
     }
 }

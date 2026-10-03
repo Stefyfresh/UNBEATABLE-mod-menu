@@ -19,7 +19,7 @@ namespace ModMenu
             }
             catch (Exception ex)
             {
-                ModMenu.Logger.LogWarning($"Error creating option provider for \"{MenuBuilder.UnCamelCase(definition.Key)}\": {ex}");
+                ModMenu.Logger.LogWarning($"Error creating option provider for \"{definition.Key}\": {ex}");
             }
         }
         private static void DoCreateListOptionProvider<T>(AcceptableValueList<T> acceptableValues, ConfigEntryBase config, ConfigDefinition definition, int providerIndex) where T : IEquatable<T>
@@ -27,7 +27,7 @@ namespace ModMenu
 
             OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] =
                 new OptionsProvider.TextOptionProvider(
-                    MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(definition.Key)),
+                    TextUtils.BeautifyString(TextUtils.UnCamelCase(definition.Key)),
                     acceptableValues.AcceptableValues.Select((i) => TomlTypeConverter.ConvertToString(i, config.SettingType)).ToArray(),
                     false,
                     () => acceptableValues.AcceptableValues.ToList().IndexOf((T)config.BoxedValue),
@@ -56,46 +56,33 @@ namespace ModMenu
             }
             catch (Exception ex)
             {
-                ModMenu.Logger.LogWarning($"Error creating option provider for \"{MenuBuilder.UnCamelCase(definition.Key)}\": {ex}");
+                ModMenu.Logger.LogWarning($"Error creating option provider for \"{definition.Key}\": {ex}");
             }
         }
         private static void DoCreateRangeOptionProvider<T>(AcceptableValueRange<T> acceptableValues, ConfigEntryBase config, ConfigDefinition definition, int providerIndex) where T : IComparable
         {
-            OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] = new OptionsProvider.TextOptionProvider(
-                MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(definition.Key)),
-                [config.GetSerializedValue(), config.GetSerializedValue(), config.GetSerializedValue()],
-                false,
-                () => 0,
-                (i) =>
+            bool isInt = config.SettingType == typeof(int);
+            float minVal = Convert.ToSingle(acceptableValues.MinValue);
+            float maxVal = Convert.ToSingle(acceptableValues.MaxValue);
+            float stepSize = Mathf.Abs(maxVal - minVal) / 10f;
+            OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] = new OptionsProvider.SliderOptionProvider(
+                TextUtils.BeautifyString(TextUtils.UnCamelCase(definition.Key)),
+                new Vector2(minVal, maxVal),
+                // isInt ? Math.Min(stepSize, 1) : stepSize,
+                isInt ? 1 : 0,
+                () => Convert.ToSingle(config.BoxedValue),
+                (val) =>
                 {
                     try
                     {
-                        // Increase value
-                        if (i == 1)
-                        {
-                            config.BoxedValue = Convert.ChangeType(Convert.ToDouble(config.BoxedValue) + 1, typeof(T));
-                            if (((T)config.BoxedValue).CompareTo(acceptableValues.MaxValue) > 0) config.BoxedValue = acceptableValues.MaxValue;
-                        }
-
-                        // Decrease value
-                        if (i == 2)
-                        {
-                            config.BoxedValue = Convert.ChangeType(Convert.ToDouble(config.BoxedValue) - 1, typeof(T));
-                            if (((T)config.BoxedValue).CompareTo(acceptableValues.MinValue) < 0) config.BoxedValue = acceptableValues.MinValue;
-                        }
-
-                        // Change text
-                        if (OptionsProvider.OptionProviders.TryGetValue((OptionsProvider.Option)providerIndex, out OptionsProvider.OptionProvider provider))
-                        {
-                            if (provider is OptionsProvider.TextOptionProvider textProvider)
-                            {
-                                textProvider._baseOptions = [config.GetSerializedValue(), config.GetSerializedValue(), config.GetSerializedValue()];
-                            }
-                        }
+                        // ModMenu.Logger.LogInfo(val);
+                        // ModMenu.Logger.LogInfo(Environment.StackTrace);
+                        if (isInt) config.BoxedValue = Convert.ToInt32(val);
+                        else config.BoxedValue = val;
                     }
                     catch (Exception ex)
                     {
-                        ModMenu.Logger.LogWarning($"Error in updating value for config \"{MenuBuilder.UnCamelCase(definition.Key)}\": {ex}");
+                        ModMenu.Logger.LogWarning($"Error in updating value for config \"{definition.Key}\": {ex}");
                     }
                 }
             );
@@ -103,13 +90,15 @@ namespace ModMenu
 
 
         // Creates an option provider for an enum type
-        public static void CreateEnumOptionProvider(this ConfigEntryBase config, ConfigDefinition definition, int providerIndex, BepInPlugin plugin)
+        public static void CreateEnumOptionProvider(this ConfigEntryBase config, int providerIndex, BepInPlugin plugin = null)
         {
             try
             {
+                ConfigDefinition definition = config.Definition;
+
                 // List<T> values = Enum.GetValues(typeof(T)).OfType<T>().ToList();
                 List<int> numbers = Enum.GetValues(config.SettingType).Cast<int>().ToList();
-                List<string> names = Enum.GetNames(config.SettingType).Select(MenuBuilder.UnCamelCase).ToList();
+                List<string> names = Enum.GetNames(config.SettingType).Select(TextUtils.UnCamelCase).ToList();
 
                 // Bitflag things
                 if (config.SettingType.GetCustomAttributes(typeof(FlagsAttribute), inherit: true).Any())
@@ -124,13 +113,13 @@ namespace ModMenu
                     {
                         // T val = (T)Enum.Parse(typeof(T), $"{i}");
                         numbers.Add(i);
-                        names.Add(MenuBuilder.UnCamelCase(Enum.Format(config.SettingType, i, "F")));
+                        names.Add(TextUtils.UnCamelCase(Enum.Format(config.SettingType, i, "F")));
                     }
                 }
 
                 OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] =
                     new OptionsProvider.TextOptionProvider(
-                        MenuBuilder.BeautifyString(MenuBuilder.UnCamelCase(definition.Key)),
+                        TextUtils.BeautifyString(TextUtils.UnCamelCase(definition.Key)),
                         names.ToArray(),
                         false,
                         () => numbers.IndexOf((int)config.BoxedValue),
@@ -150,14 +139,14 @@ namespace ModMenu
                             }
                             catch (Exception ex)
                             {
-                                ModMenu.Logger.LogWarning($"Error in updating value for config \"{MenuBuilder.UnCamelCase(definition.Key)}\": {ex}");
+                                ModMenu.Logger.LogWarning($"Error in updating value for config \"{definition.Key}\": {ex}");
                             }
                         }
                     );
             }
             catch (Exception ex)
             {
-                ModMenu.Logger.LogWarning($"Error creating option provider for \"{MenuBuilder.UnCamelCase(definition.Key)}\": {ex}");
+                ModMenu.Logger.LogWarning($"Error creating option provider for \"{config.Definition.Key}\": {ex}");
             }
         }
     }

@@ -37,17 +37,19 @@ namespace ModMenu.Patches
             MenuBuilder.Init(__instance.transform);
 
             // Create mods text on arcade mode screen
-            // TODO: add text to arcade menu "<cspace=0.5em><voffset=-14em><align="left"><space=-41em><size=200%>UNBEATABLE v2.3.1.1 (40 mods loaded)"
-            Transform logoText = __instance.transform.Find("ScreenArea/RecurentElements/Logo/Subtitle");
-            Transform bpm = __instance.transform.Find("ScreenArea/RecurentElements/BpmCounter");
-            if (logoText && bpm)
+            if (ModMenu.showVersionText.Value)
             {
-                TextMeshProUGUI tmp = logoText.GetComponent<TextMeshProUGUI>();
-                if (tmp)
+                Transform logoText = __instance.transform.Find("ScreenArea/RecurentElements/Logo/Subtitle");
+                Transform bpm = __instance.transform.Find("ScreenArea/RecurentElements/BpmCounter");
+                if (logoText && bpm)
                 {
-                    bpm.localPosition = new Vector3(bpm.localPosition.x, bpm.localPosition.y + 30, bpm.localPosition.z);
-                    tmp.maxVisibleCharacters = 9999;
-                    tmp.text += $"<br><cspace=0.25em><voffset=-27.5em><align=\"center\"><space=-41em><size=160%>// v{Application.version} ({ModMenu.NumLoadedMods} {(ModMenu.NumLoadedMods == 1 ? "MOD" : "MODS")} LOADED)";
+                    TextMeshProUGUI tmp = logoText.GetComponent<TextMeshProUGUI>();
+                    if (tmp)
+                    {
+                        bpm.localPosition = new Vector3(bpm.localPosition.x, bpm.localPosition.y + 30, bpm.localPosition.z);
+                        tmp.maxVisibleCharacters = 9999;
+                        tmp.text += $"<br><cspace=0.25em><voffset=-27.5em><align=\"center\"><space=-41em><size=160%>// v{Application.version} ({ModMenu.NumLoadedMods} {(ModMenu.NumLoadedMods == 1 ? "MOD" : "MODS")} LOADED)";
+                    }
                 }
             }
         }
@@ -99,10 +101,9 @@ namespace ModMenu.Patches
     {
         static void Postfix(ref MainMenuController __instance)
         {
-            __instance.VersionNumber.text = $"v{Application.version} ({ModMenu.NumLoadedMods} {(ModMenu.NumLoadedMods == 1 ? "MOD" : "MODS")} LOADED)";
+            if (ModMenu.showVersionText.Value) __instance.VersionNumber.text = $"v{Application.version} ({ModMenu.NumLoadedMods} {(ModMenu.NumLoadedMods == 1 ? "MOD" : "MODS")} LOADED)";
         }
     }
-
 
 
 
@@ -113,7 +114,7 @@ namespace ModMenu.Patches
         static void Postfix()
         {
             // Code to run when menu is active
-            if (MenuTransitionsController.showMenu && MenuBuilder.modMenuGO && MenuBuilder.modMenuGO.transform.parent.gameObject.activeInHierarchy)
+            if (CustomMenuController.showMenu && MenuBuilder.modMenuGO && MenuBuilder.modMenuGO.transform.parent.gameObject.activeInHierarchy)
             {
                 // Enable menu screen when menu is active
                 bool wantedState = true;
@@ -125,18 +126,81 @@ namespace ModMenu.Patches
                     }
                 }
 
-                if (!MenuTransitionsController.hasLoaded && wantedState == true)
+                if (!CustomMenuController.hasLoaded && wantedState == true)
                 {
                     // Move the scrollbar to the top
                     MenuBuilder.modMenuGO.SetActive(true);
                     LayoutRebuilder.ForceRebuildLayoutImmediate(MenuBuilder.modMenuContent as RectTransform);
                     if (MenuBuilder.scroll) MenuBuilder.scroll.verticalNormalizedPosition = 1;
 
-                    MenuTransitionsController.hasLoaded = true;
+                    CustomMenuController.hasLoaded = true;
                 }
 
                 if (MenuBuilder.modMenuGO.activeSelf != wantedState) MenuBuilder.modMenuGO.SetActive(wantedState);
             }
+        }
+    }
+
+
+
+#pragma warning disable Harmony003
+    [HarmonyPatch(typeof(CustomUINavigation))]
+    [HarmonyPatch(nameof(CustomUINavigation.FindSelectableAutomatic))]
+    internal class CustomUIOnMovePostfix
+    {
+        static bool Prefix(ref CustomUINavigation __instance, ref Selectable __result, Vector3 dir, bool wrapAround, Selectable[] selectableList, Transform childsOf)
+        {
+            if (CustomMenuController.showMenu && MenuBuilder.modMenuGO && MenuBuilder.modMenuGO.transform.parent.gameObject.activeInHierarchy)
+            {
+                float lowestDistance = float.NegativeInfinity;
+                float lowestDistanceWrap = float.NegativeInfinity;
+                Selectable closestSelectable = null;
+                Selectable wrapAroundSelectable = null;
+                foreach (Selectable checkSelectable in selectableList ?? Selectable.allSelectablesArray)
+                {
+                    if (checkSelectable && !(checkSelectable == __instance._owner) && checkSelectable.IsInteractable())
+                    {
+                        if (checkSelectable.navigation.mode == Navigation.Mode.None)
+                        {
+                            CustomUINavigation component = checkSelectable.GetComponent<CustomUINavigation>();
+                            if (!component || (component.upNavigation.navigationMode == CustomUINavigation.NavigationMode.None && component.downNavigation.navigationMode == CustomUINavigation.NavigationMode.None && component.leftNavigation.navigationMode == CustomUINavigation.NavigationMode.None && component.rightNavigation.navigationMode == CustomUINavigation.NavigationMode.None))
+                            {
+                                continue;
+                            }
+                        }
+                        if (!childsOf || (checkSelectable.transform.IsChildOf(childsOf) && !(checkSelectable.transform == childsOf)))
+                        {
+                            RectTransform rect = checkSelectable.transform as RectTransform;
+                            Vector3 distanceVector = checkSelectable.transform.TransformPoint(Vector3.zero) - __instance.transform.TransformPoint(CustomUINavigation.GetPointOnRectEdge(__instance.transform as RectTransform, Quaternion.Inverse(__instance.transform.rotation) * dir.normalized));
+                            distanceVector.x = 0;
+                            distanceVector.z = 0;
+                            float distanceInSearchDir = Vector3.Dot(dir, distanceVector);
+                            if (wrapAround && distanceInSearchDir < 0f)
+                            {
+                                float distance = -distanceInSearchDir * distanceVector.sqrMagnitude;
+                                if (distance > lowestDistanceWrap)
+                                {
+                                    lowestDistanceWrap = distance;
+                                    wrapAroundSelectable = checkSelectable;
+                                }
+                            }
+                            else if (distanceInSearchDir > 0f)
+                            {
+                                float distance = distanceInSearchDir / distanceVector.sqrMagnitude;
+                                if (distance > lowestDistance)
+                                {
+                                    lowestDistance = distance;
+                                    closestSelectable = checkSelectable;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (wrapAround && closestSelectable == null) __result = wrapAroundSelectable;
+                __result = closestSelectable;
+                return false;
+            }
+            return true;
         }
     }
 }
