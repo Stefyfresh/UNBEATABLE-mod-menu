@@ -48,18 +48,18 @@ namespace ModMenu
 
 
         // Creates an option provider for an AcceptableValueRange type
-        public static void CreateRangeOptionProvider(this AcceptableValueBase instance, ConfigEntryBase config, ConfigDefinition definition, int providerIndex)
+        public static void CreateRangeOptionProvider(this AcceptableValueBase instance, ConfigEntryBase config, ConfigDefinition definition, int providerIndex, string formatSpecifier)
         {
             try
             {
-                DoCreateRangeOptionProvider((dynamic)instance, config, definition, providerIndex);
+                DoCreateRangeOptionProvider((dynamic)instance, config, definition, providerIndex, formatSpecifier);
             }
             catch (Exception ex)
             {
                 ModMenu.Logger.LogWarning($"Error creating option provider for \"{definition.Key}\": {ex}");
             }
         }
-        private static void DoCreateRangeOptionProvider<T>(AcceptableValueRange<T> acceptableValues, ConfigEntryBase config, ConfigDefinition definition, int providerIndex) where T : IComparable
+        private static void DoCreateRangeOptionProvider<T>(AcceptableValueRange<T> acceptableValues, ConfigEntryBase config, ConfigDefinition definition, int providerIndex, string formatSpecifier) where T : IComparable
         {
             bool isInt = config.SettingType == typeof(int);
             float minVal = Convert.ToSingle(acceptableValues.MinValue);
@@ -68,22 +68,17 @@ namespace ModMenu
             OptionsProvider.OptionProviders[(OptionsProvider.Option)providerIndex] = new OptionsProvider.SliderOptionProvider(
                 TextUtils.BeautifyString(TextUtils.UnCamelCase(definition.Key)),
                 new Vector2(minVal, maxVal),
-                // isInt ? Math.Min(stepSize, 1) : stepSize,
                 isInt ? 1 : 0,
                 () => Convert.ToSingle(config.BoxedValue),
                 (val) =>
                 {
-                    try
-                    {
-                        // ModMenu.Logger.LogInfo(val);
-                        // ModMenu.Logger.LogInfo(Environment.StackTrace);
-                        if (isInt) config.BoxedValue = Convert.ToInt32(val);
-                        else config.BoxedValue = val;
-                    }
-                    catch (Exception ex)
-                    {
-                        ModMenu.Logger.LogWarning($"Error in updating value for config \"{definition.Key}\": {ex}");
-                    }
+                    // Reset to default if invalid
+                    if (val > maxVal || val < minVal || val == float.PositiveInfinity || val == float.NegativeInfinity) val = Convert.ToSingle(config.DefaultValue);
+
+                    // Round if necessary
+                    if (formatSpecifier != null && float.TryParse(val.ToString(formatSpecifier), out float parsed)) val = parsed;
+                    if (isInt) config.BoxedValue = Convert.ToInt32(val);
+                    else config.BoxedValue = val;
                 }
             );
         }
@@ -96,12 +91,11 @@ namespace ModMenu
             {
                 ConfigDefinition definition = config.Definition;
 
-                // List<T> values = Enum.GetValues(typeof(T)).OfType<T>().ToList();
                 List<int> numbers = Enum.GetValues(config.SettingType).Cast<int>().ToList();
                 List<string> names = Enum.GetNames(config.SettingType).Select(TextUtils.UnCamelCase).ToList();
 
                 // Bitflag things
-                if (config.SettingType.GetCustomAttributes(typeof(FlagsAttribute), inherit: true).Any())
+                if (config.SettingType.GetCustomAttributes(typeof(FlagsAttribute), true).Any())
                 {
                     // Find last power of 2 and get the next 2^n - 1
                     int power = numbers.FindLast((n) => n % 2 == 0) * 2 - 1;
@@ -111,7 +105,6 @@ namespace ModMenu
 
                     for (int i = start; i <= power; i++)
                     {
-                        // T val = (T)Enum.Parse(typeof(T), $"{i}");
                         numbers.Add(i);
                         names.Add(TextUtils.UnCamelCase(Enum.Format(config.SettingType, i, "F")));
                     }

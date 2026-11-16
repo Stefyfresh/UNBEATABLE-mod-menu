@@ -3,7 +3,9 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>ModMenu</AssemblyName>
-    <Version>1.0.0</Version>
+    <RootNamespace>ModMenu</RootNamespace>
+    <Version>1.1.0</Version>
+    <Description>https://github.com/Stefyfresh/UNBEATABLE-mod-menu</Description>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <!-- <RestoreAdditionalProjectSources>
@@ -11,7 +13,6 @@
       https://nuget.bepinex.dev/v3/index.json;
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources> -->
-    <RootNamespace>ModMenu</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
@@ -55,9 +56,6 @@
     <Reference Include="FMODUnity" Publicize="true">
       <HintPath>..\Hints\FMODUnity.dll</HintPath>
     </Reference>
-    <!-- <Reference Include="DOTween">
-      <HintPath>..\Hints\DOTween.dll</HintPath>
-    </Reference> -->
     <Reference Include="Rewired_Core" Publicize="true">
       <HintPath>..\Hints\Rewired_Core.dll</HintPath>
     </Reference>

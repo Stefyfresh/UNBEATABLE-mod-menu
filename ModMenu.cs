@@ -30,7 +30,7 @@ namespace ModMenu
     {
         public const string PLUGIN_GUID = "com.stefyfresh.ModMenu";
         public const string PLUGIN_NAME = "Mod Menu";
-        public const string PLUGIN_VERSION = "1.0.0";
+        public const string PLUGIN_VERSION = "1.1.0";
         internal static new ManualLogSource Logger;
 
         // Internal mod options
@@ -38,10 +38,11 @@ namespace ModMenu
         public static ConfigEntry<bool> sortOptions;
         public static ConfigEntry<bool> showVersionText;
         public static ConfigEntry<MenuSpacing> menuSpacing;
+        public static ConfigEntry<bool> doUpdateCheck;
 
 
         public static ModMenu Instance { get; private set; }
-        public static int NumLoadedMods { get { return Instance.transform.GetComponents<BaseUnityPlugin>().Length; } }
+        public static int NumLoadedMods => Instance.transform.GetComponents<BaseUnityPlugin>().Length;
 
 
         private void Awake()
@@ -55,14 +56,14 @@ namespace ModMenu
                 "General",
                 "ShowOptionDescriptions",
                 true,
-                "Shows a detailed description for all mod menu options, if available"
+                "Shows a detailed description for any options that have a description."
             );
 
             sortOptions = Config.Bind(
                 "General",
                 "SortMenuOptions",
                 true,
-                "Sorts all the configuration options for each plugin's section in alphabetical order.\nIf disabled, the options are sorted in the order they are created by the plugin."
+                "Sorts all the configuration options for each mod's section in alphabetical order."
             );
 
             showVersionText = Config.Bind(
@@ -84,13 +85,20 @@ namespace ModMenu
                 MenuBuilder.TryRebuildMenu(true);
             };
 
+            doUpdateCheck = Config.Bind(
+                "General",
+                "DoUpdateCheck",
+                true,
+                "Checks GitHub for the most recent version of any mods that contain a GitHub URL in their attributes."
+            );
+
             var harmony = new Harmony(PLUGIN_GUID);
             harmony.PatchAll();
         }
 
         private void Start()
         {
-            ConfigFinder.Init();
+            ConfigManager.Init();
         }
     }
 }

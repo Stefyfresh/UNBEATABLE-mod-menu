@@ -1,23 +1,25 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using Newtonsoft.Json;
+using UnityEngine;
 
 namespace ModMenu
 {
-    public static class ConfigFinder
+    public static class ConfigManager
     {
         public static readonly string pluginShowOverridePath = Path.Combine(Paths.ConfigPath, $"{ModMenu.PLUGIN_GUID}.pluginOverrides.json");
         public static Dictionary<string, bool> pluginShowOverrides;
-
 
         public static List<string> pluginGUIDs = [];
         public static Dictionary<string, ConfigFile> pluginConfigFiles = [];
         public static Dictionary<string, BepInPlugin> pluginMetadata = [];
 
-        public static int NumConfigurableMods { get { return pluginConfigFiles.Count(kvp => kvp.Value.Count > 0); } }
+        public static int NumConfigurableMods => pluginConfigFiles.Count(kvp => kvp.Value.Count > 0);
         public static int NumConfigOptions
         {
             get
@@ -31,31 +33,43 @@ namespace ModMenu
 
         public static void Init()
         {
-            BaseUnityPlugin[] plugins = ModMenu.Instance?.gameObject?.GetComponents<BaseUnityPlugin>();
-
-            if (plugins != null && plugins.Count() > 0)
+            try
             {
-                List<BaseUnityPlugin> sortedPlugins = plugins.ToList();
-                sortedPlugins.Sort((a, b) => a.Info.Metadata.Name.CompareTo(b.Info.Metadata.Name));
-
-                foreach (BaseUnityPlugin plugin in sortedPlugins)
+                if (Chainloader.PluginInfos.Values != null && Chainloader.PluginInfos.Values.Count() > 0)
                 {
-                    // Skip the current plugin as we set the configs manually
-                    if (plugin == ModMenu.Instance) continue;
+                    List<PluginInfo> sortedPlugins = Chainloader.PluginInfos.Values.Where(plugin => plugin != null).ToList();
+                    sortedPlugins.Sort((a, b) => a.Metadata.Name.CompareTo(b.Metadata.Name));
 
-                    // Add all plugin information
-                    pluginGUIDs.Add(plugin.Info.Metadata.GUID);
-                    pluginConfigFiles.Add(plugin.Info.Metadata.GUID, plugin.Config);
-                    pluginMetadata.Add(plugin.Info.Metadata.GUID, plugin.Info.Metadata);
+                    foreach (PluginInfo plugin in sortedPlugins)
+                    {
+                        // Skip mod menu as we set the configs manually
+                        if (plugin.Instance == ModMenu.Instance)
+                        {
+                            PluginUpdateManager.CheckForUpdates(plugin.Instance);
+                            continue;
+                        }
+
+                        // Add all plugin information
+                        pluginGUIDs.Add(plugin.Metadata.GUID);
+                        pluginConfigFiles.Add(plugin.Metadata.GUID, plugin.Instance.Config);
+                        pluginMetadata.Add(plugin.Metadata.GUID, plugin.Metadata);
+
+                        // Check for plugin updates
+                        PluginUpdateManager.CheckForUpdates(plugin.Instance);
+                    }
+
+                    LoadPluginShowOverrides();
+
+                    ModMenu.Logger.LogInfo($"Gathered all config options for {sortedPlugins.Count()} plugins.");
                 }
-
-                LoadPluginShowOverrides();
-
-                ModMenu.Logger.LogInfo("Gathered all configs for plugins!");
+                else
+                {
+                    ModMenu.Logger.LogWarning("Could not find any plugins to gather config files for!");
+                }
             }
-            else
+            catch (System.Exception ex)
             {
-                ModMenu.Logger.LogWarning("Could not find any plugins to gather config files for.");
+                ModMenu.Logger.LogError($"Failed to gather config options! {ex.Message}");
             }
         }
 
