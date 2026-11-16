@@ -11,33 +11,7 @@ namespace ModMenu
     {
         public static bool showMenu;
         public static bool hasLoaded;
-        // public static Transform transitionsTransform;
         public static Transform optionsTransitionsTransform;
-        // private static bool hasMadeFaster;
-
-        // public static void SetFasterMenuTransitions(bool faster)
-        // {
-        //     float speed = 1;
-        //     if (faster && !hasMadeFaster)
-        //     {
-        //         speed = 1.5f;
-        //         ModMenu.Logger.LogInfo("Set increased menu transition speed.");
-        //         hasMadeFaster = true;
-        //     }
-        //     else if (!faster && hasMadeFaster)
-        //     {
-        //         speed = 1 / 1.5f;
-        //         ModMenu.Logger.LogInfo("Set decreased menu transition speed.");
-        //         hasMadeFaster = false;
-        //     }
-
-        //     foreach (Transform child in transitionsTransform.transform.GetChild(2))
-        //     {
-        //         UITransition trans = child.gameObject.GetComponent<UITransition>();
-        //         if (trans) trans.speed *= speed;
-        //     }
-        //     ModMenu.fasterMenuTransitions.Value = faster;
-        // }
 
 
         public static void RegisterModMenu()

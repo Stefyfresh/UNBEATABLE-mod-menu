@@ -34,11 +34,12 @@ namespace ModMenu
 
 
 
-        public static string UnCamelCase(string text)
+        public static string UnCamelCase(string str)
         {
-            // Case 1: Inserts space between lowercase/digit and an uppercase letter
-            // Case 2: Inserts space between an uppercase letter and the start of a new camelCase word
-            return Regex.Replace(text, @"([a-z0-9])([A-Z])|([A-Z])([A-Z][a-z])", "$1$3 $2$4");
+            // Need to handle two cases to add spaces
+            // Case 1: Check for lowercase or digit and uppercase after
+            // Case 2: Check for an uppercase followed by lowercase and an uppercase preceding
+            return Regex.Replace(str, @"([a-z0-9])([A-Z])|([A-Z])([A-Z][a-z])", "$1$3 $2$4");
         }
 
 
