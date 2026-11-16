@@ -1,54 +1,69 @@
 # UNBEATABLE Mod Menu
 
-A mod to add a mod menu to the hit rhythm game UNBEATABLE!
+A mod to add a customizable mod menu to the hit rhythm game UNBEATABLE!
 
-This mod is currently in development, check back soon for more information!
+![A screenshot showing Mod Menu in game.](img/mod-menu.png)
+
+Disclaimer: This is not affiliated with or endorsed by D-CELL GAMES.
 
 ## Features
 
-- Gathers configuration automatically from all BepInEx plugins that are loaded
-- Creates an additional category in the Arcade Mode options menu labeled "mods"
-- Uses the same UI as the existing menu screens with some slight tweaks for readbility
-- Verified to support boolean, number, and string config types, along with acceptable value ranges and lists
+- Gathers configuration automatically from all BepInEx plugins that are loaded.
+- Creates an additional category in the Arcade Mode options menu labeled "mods".
+- Uses the same UI as the existing menu screens with some slight tweaks for readability.
+- Works with any BepInEx configuration type; best supports boolean, number, string, enum, and acceptable value ranges and lists.
+- Works with the tag class `ConfigurationManagerAttributes` and a custom class `ModMenuAttributes` to allow more flexibility for Mod Menu setting display.
+- Automatically checks for mod updates for any mods that have a GitHub repository URL embedded in the assembly metadata and prompts if updates are found.
+- Includes double-click reset to default value functionality for configuration options that use a value range (rendered as a slider in Mod Menu).
 
 ## Configuration
 
-The mod menu is accessed from Arcade Mode; simply press "options" on the bottom right (or the J key by default) to enter the Arcade Mode options. Once inside the menu, the "mods" button will open the mod menu!
+The mod menu is accessed from Arcade Mode; simply press "options" on the bottom right (or the J key by default) to enter the Arcade Mode options. Once inside the menu, the "mods" button will open the Mod Menu!
 
 All entries for different plugins are labelled with a large header defining the plugin, with configuration options below each header.
-The section for each BepInEx config entry is also shown, although the [General] section is omitted for clarity and is always shown first.
+The section for each BepInEx config entry is also shown. The [General] section header is omitted for clarity and is always shown first.
 
-There are currently two configuration options for the mod menu itself:
+There are five configurable options for Mod Menu:
 
-1) Faster Menu Transitions - This increases the speed of all in-game transitions by 1.5x (note: I may remove this later and integrate it into a different mod)
-2) Show Option Descriptions - This shows more detailed descriptions for every config option, using the descriptions present in the BepInEx config file
+### Check For Mod Updates
+
+If this is enabled, for any mod assembly DLL files that have embedded metadata including a GitHub repository URL, Mod Menu will automatically check for the latest version, compare it to the current version, and prompt for updates if there is a new version available. The popup includes a handy shortcut to the latest release page!
+
+![A screenshot showing the Mod Menu update popup.](img/update-popup.png)
+
+### Menu Spacing
+
+This controls the spacing between menu items, section headers, titles, and whitespace in the menu. There are four options: Compact, Normal, Expanded, and Comfy, of increasing levels of spacing.
+
+### Show Option Descriptions
+
+This shows more detailed descriptions for every config option, using the descriptions present in the BepInEx config file for any options that have it.
+
+Pictured: Mod Menu with option descriptions disabled, Compact spacing.
+![A screenshot showing the Mod Menu in Compact menu spacing.](img/mod-menu-compact.png)
+
+### Show Version and Mods Text
+
+Shows text denoting the current version of the game and the number of loaded mods in both the main menu and the Arcade Mode menu.
+
+### Sort Menu Options
+
+Sorts all of the BepInEx configuration entries for each mod's sections in alphabetical order. When disabled, they are sorted in the order that the mod creates them in.
+
+## Custom Tag Attributes
+
+To allow for greater functionality and customizability of how Mod Menu renders and accepts configuration options, Mod Menu includes a custom class `ModMenuAttributes` that works similarly to `ConfigurationManagerAttributes`, which is also supported.
+
+`ConfigurationManagerAttributes.Browsable` is natively supported by Mod Menu, and `ModMenuAttributes` includes a few useful rendering options that you can add to your BepInEx `Config.Bind()` to change how Mod Menu will render your configuration options!
+
+Add `ModMenuAttributes.cs` to your mod's project and include it in the tags of `Config.Bind()` for mod menu to use your custom attributes. Check out the file for more details on what options are available.
 
 ## Mod Installation Instructions
 
-- Download the latest release of the mod from the releases page, and extract the DLL file from inside the zip
-- Download BepInEx from [here](https://github.com/BepInEx/BepInEx/releases) and extract the BepInEx folder from the zip into the main UNBEATABLE game code folder (the one that contains UNBEATABLE.exe). You must extract ALL the files from that zip into the main UNBEATABLE folder (do NOT make a new folder!)
-- Run the game once and close it
-- Put the mod DLL into the `BepInEx/plugins` folder
+For installation instructions, refer to my mod installation guide here:
 
-The structure should then be:
+https://gist.github.com/Stefyfresh/1140bf18c5f3895bd807258c16483887
 
-<pre>
-UNBEATABLE
-├─── UNBEATABLE.exe
-├─── UNBEATABLE_Data
-├─── {some other folders and files}
-├─── .doorstop_version
-├─── changelog.txt
-├─── doorstop_config.ini
-├─── winhttp.dll
-└─── BepInEx
-    ├─── cache
-    ├─── config
-    ├─── core
-    ├─── patchers
-    └─── plugins
-        ├─── SomeMod.dll
-        └─── SomeOtherMod.dll
-</pre>
+---
 
-Once the mod is in the folder, restart the game and it should load.
+###### All code for Mod Menu was written by me, by hand.
